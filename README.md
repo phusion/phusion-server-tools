@@ -105,7 +105,7 @@ Runs the given command but only print its output (both STDOUT and STDERR) if its
 
 Garbage collects all git repositories defined in `config.yml`. For convenience, the list of repositories to garbage collect can be a glob, e.g. `/u/apps/**/*.git`.
 
-In order to preserve file permissions, the `git gc` command is run as the owner of the repository directory. Therefore this tool **must** be run as root.
+In order to preserve file permissions, the `git gc` command is run as the owner of the repository directory by invoking `su`. Therefore this tool must be run as root, or it must be run as the owner of all given git repositories.
 
 Make it run every Sunday at 0:00 AM in cron with low I/O priority:
 

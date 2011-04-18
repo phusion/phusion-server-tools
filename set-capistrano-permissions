@@ -35,6 +35,9 @@ end
 
 # Set the permissions on a /u/apps/.../releases/... directory.
 def set_permissions_on_release_dir(dir)
+	# Deny web server access to everything except for a few things.
+	sh "deny #{WWW_USER} #{dir}"
+	
 	# Executable access to the directory itself
 	# so that the web server can access subdirectories.
 	sh "setfacl -m user:#{WWW_USER}:--x #{dir}"

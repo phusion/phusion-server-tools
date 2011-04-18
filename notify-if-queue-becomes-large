@@ -1,5 +1,9 @@
 #!/usr/bin/env ruby
-THRESHOLD=1000
+require File.expand_path(File.dirname(__FILE__) + '/shared')
+THRESHOLD = config(:threshold)
+FROM      = config(:from)
+TO        = config(:to)
+SUBJECT   = config(:subject)
 
 warnings = []
 `rabbitmqctl list_queues -q name messages`.split("\n").each do |line|
@@ -12,9 +16,9 @@ end
 
 if !warnings.empty?
 	IO.popen("sendmail -t", "w") do |f|
-		f.puts "To: info@phusion.nl"
-		f.puts "From: noreply@unionstationapp.com"
-		f.puts "Subject: [Union Station] Queue going out of control"
+		f.puts "To: #{TO}"
+		f.puts "From: #{FROM}"
+		f.puts "Subject: #{SUBJECT}"
 		f.puts
 		f.puts warnings.join("\n")
 	end

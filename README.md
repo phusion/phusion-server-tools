@@ -56,6 +56,30 @@ You must also make sure your filesystem is mounted with ACL support, e.g.:
 
 Don't forget to update /etc/fstab too.
 
+### display-queue - Display statistics for local RabbitMQ queues
+
+This tool displays statistics for RabbitMQ queues in a more friendly formatter than `rabbitmqctl list_queues`. The meanings of the columns are as follows:
+
+ * Messages - Total number of messages in the queue. Equal to `Ready + Unack`.
+ * Ready - Number of messages in the queue not yet consumed.
+ * Unack - Number of messages in the queue that have been consumed, but not yet acknowledged.
+ * Consumers - Number of consumers subscribed to this queue.
+ * Memory - The amount of memory that RabbitMQ is using for this queue.
+
+### watch-queue - Display changes in local RabbitMQ queues
+
+`watch-queue` combines the `watch` tool with `display-queue`. It continuously displays the latest queue statistics and highlights changes.
+
+### purge-queue - Removes all messages from a local RabbitMQ queue
+
+`purge-queue` removes all messages from given given RabbitMQ queue. It connects to a RabbitMQ server on localhost on the default port. Note that consumed-but-unacknowledged messages in the queue cannot be removed.
+
+    purge-queue <QUEUE NAME HERE>
+
+### truncate
+
+Truncates the all passed files to 0 bytes.
+
 ### silcence-unless-failed
 
 Runs the given command but only print its output (both STDOUT and STDERR) if its exit code is non-zero. The script's own exit code is the same as the command's exit code.

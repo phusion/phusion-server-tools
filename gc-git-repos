@@ -1,20 +1,14 @@
 #!/usr/bin/env ruby
-# This script is automatically called in a cron job by root.
+require File.expand_path(File.dirname(__FILE__) + '/shared')
 require 'etc'
 
-DIRS = Dir[
-	"/u/apps/**/.git"
-]
+DIRS = Dir[*config(:glob)]
 DIRS.each do |dir|
 	puts "# Garbage collecting #{dir}"
 	Dir.chdir(dir) do
 		stat = File.stat(dir)
 		username = Etc.getpwuid(stat.uid).name
-		command = "su -c 'git gc' #{username}"
-		puts command
-		if !system(command)
-			abort "'git gc' failed"
-		end
+		quiet_sh "su -c 'git gc' #{username}"
 	end
 	puts
 end

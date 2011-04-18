@@ -1,0 +1,9 @@
+git-gc-repos:
+  glob:
+    - /u/apps/**/.git
+
+notify-if-queue-becomes-large:
+  threshold: 1000
+  to: your@email.com
+  from: your@server.com
+  subject: Queue going out of control

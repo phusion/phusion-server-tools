@@ -3,9 +3,12 @@ ENV['PATH'] = "#{TOOLS_DIR}:#{ENV['PATH']}"
 
 def sh(command, *args)
 	puts "# #{command} #{args.join(' ')}"
+	quiet_sh(command, *args)
+end
+
+def quiet_sh(command, *args)
 	if !system(command, *args)
-		STDERR.puts "*** ERROR"
-		exit 1
+		abort "*** COMMAND FAILED: #{command} #{args.join(' ')}".strip
 	end
 end
 
@@ -34,4 +37,23 @@ def pv_or_cat
 	else
 		return 'cat'
 	end
+end
+
+def load_config
+	require 'yaml'
+	if !File.exist?("#{TOOLS_DIR}/config.yml")
+		abort "*** ERROR: you must create a #{TOOLS_DIR}/config.yml. " +
+			"Please see #{TOOLS_DIR}/config.yml.example for an example."
+	end
+	all_config = YAML.load_file("#{TOOLS_DIR}/config.yml")
+	$TOOL_CONFIG = all_config[File.basename($0)]
+end
+
+def config(name)
+	load_config if !$TOOL_CONFIG
+	value = $TOOL_CONFIG[name.to_s]
+	if !value
+		abort "*** ERROR: configuration option #{File.basename($0)}.#{name} not set."
+	end
+	return value
 end

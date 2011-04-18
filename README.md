@@ -31,9 +31,9 @@ Make it run daily at 0:00 AM in cron:
 
 ### permit and deny - Easily set fine-grained permissions using ACLs
 
-`permit` gives a user access to a single file, or recursive access to a directory, using ACLs. In case of directories, the default ACL is modified too so that any new files created in that directory inherit the ACL rule that allows access for the given user.
+`permit` recursively gives a user access to a directory by using ACLs. The default ACL is modified too so that any new files created in that directory or in subdirectories inherit the ACL rules that allow access for the given user.
 
-`deny` removes all ACLs for a given user on a single file, or recursively on a directory.
+`deny` recursively removes all ACLs for a given user on a directory, including default ACLs.
 
 The standard `setfacl` tool is too hard to use and sometimes does stupid things such as unexpectedly making files executable. These scripts are simple and work as expected.
 

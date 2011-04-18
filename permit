@@ -1,9 +1,39 @@
 #!/usr/bin/env ruby
-def help
-	puts "Usage: permit <USERNAME> <DIR> [--read-write]"
-	puts "Give USERNAME read-only or read-write permission to directory DIR."
-	puts "Default is read-only unless --read-write is given."
-	exit 1
+require 'optparse'
+
+def parse_options
+	options = {}
+	parser = OptionParser.new do |opts|
+		nl = "\n" + ' ' * 37
+		opts.banner = "Usage: permit <USERNAME> <DIRECTORIES...> [options]"
+		opts.separator "Give USERNAME read-only or read-write permission to the given directories."
+		opts.separator ""
+		
+		opts.separator "Options:"
+		opts.on("--read-write",
+		        "Give read-write access. Default is#{nl}" +
+		        "read-only unless this option is given.") do
+			options[:read_write] = true
+		end
+	end
+	begin
+		parser.parse!
+	rescue OptionParser::ParseError => e
+		puts e
+		puts
+		puts "Please see '--help' for valid options."
+		exit 1
+	end
+
+	if options[:help]
+		puts parser
+		exit
+	elsif ARGV.size < 2
+		puts parser
+		exit 1
+	else
+		return options
+	end
 end
 
 def sh(command, *args)
@@ -14,27 +44,24 @@ def sh(command, *args)
 	end
 end
 
-help if ARGV.size != 2 && ARGV.size != 3
-username, dir, read_write = ARGV
-if read_write && read_write != "--read-write"
-	STDERR.puts "*** Invalid option #{read_write}"
-	help
-end
-
-puts "cd #{dir}"
-Dir.chdir(dir) do
-	executable_files = "/tmp/executable-files.#{$$}"
-	sh "find -type f -executable -print0 > #{executable_files}"
-	if read_write
-		sh "find -type f -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:rw-"
-		sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:rwx"
-		sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -d -m user:#{username}:rwx"
-	else
-		sh "find -type f -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:r-"
-		sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:r-x"
-		sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -d -m user:#{username}:r-x"
+options = parse_options
+username, *dirs = ARGV
+dirs.each do |dir|
+	puts "cd #{dir}"
+	Dir.chdir(dir) do
+		executable_files = "/tmp/executable-files.#{$$}"
+		sh "find -type f -executable -print0 > #{executable_files}"
+		if read_write
+			sh "find -type f -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:rw-"
+			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:rwx"
+			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -d -m user:#{username}:rwx"
+		else
+			sh "find -type f -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:r-"
+			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:r-x"
+			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -d -m user:#{username}:r-x"
+		end
+		sh "find -type f -print0 | xargs -0 -n 1000 -r chmod -x"
+		sh "cat #{executable_files} | xargs -0 -n 1000 -r chmod +x"
+		sh "rm -f #{executable_files}"
 	end
-	sh "find -type f -print0 | xargs -0 -n 1000 -r chmod -x"
-	sh "cat #{executable_files} | xargs -0 -n 1000 -r chmod +x"
-	sh "rm -f #{executable_files}"
 end

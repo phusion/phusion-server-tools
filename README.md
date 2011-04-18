@@ -21,7 +21,7 @@ Each tool has its own prerequities, but here are some common prerequities:
 
 ### backup-mysql - Rotating MySQL dumps
 
-A script which backs up all MySQL databases to `/var/backups/mysql`. At most 10 backups are kept. All backups are compressed with gzip.
+A script which backs up all MySQL databases to `/var/backups/mysql`. At most 10 backups are kept. All backups are compressed with gzip. The backup directory is denied all world access.
 
 It uses `mysql` to obtain a list of databases and `mysqldump` to dump the database contents. If you want to run this script unattended you should therefore set the right login information in `~/.my.cnf`, sections `[mysql]` and `[mysqldump]`.
 

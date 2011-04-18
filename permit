@@ -40,7 +40,7 @@ end
 options = parse_options
 username, *dirs = ARGV
 dirs.each do |dir|
-	puts "cd #{dir}"
+	print_activity "cd #{dir}"
 	Dir.chdir(dir) do
 		executable_files = "/tmp/executable-files.#{$$}"
 		sh "find -type f -executable -print0 > #{executable_files}"

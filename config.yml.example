@@ -1,3 +1,7 @@
+set-capistrano-permissions:
+  capistrano_dir: /u/apps
+  www_user: www-data
+
 git-gc-repos:
   glob:
     - /u/apps/**/.git

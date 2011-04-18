@@ -5,27 +5,29 @@ if ENV['TOOL_LEVEL']
 else
 	TOOL_LEVEL = 0
 end
+ENV['TOOL_LEVEL'] = (TOOL_LEVEL + 1).to_s
 
 def print_activity(message)
 	if TOOL_LEVEL == 0
-		puts "# #{message}"
+		if STDOUT.tty?
+			puts "\e[1m# #{message}\e[22m"
+		else
+			puts "# #{message}"
+		end
 	else
-		puts "#{TOOL_LEVEL * '  '}-> #{message}"
+		puts "#{'  ' * TOOL_LEVEL}-> #{message}"
 	end
 end
 
 def sh(command, *args)
-	print_activity "# #{command} #{args.join(' ')}"
+	print_activity "#{command} #{args.join(' ')}"
 	quiet_sh(command, *args)
 end
 
 def quiet_sh(command, *args)
-	ENV['TOOL_LEVEL'] = (TOOL_LEVEL + 1).to_s
 	if !system(command, *args)
 		abort "*** COMMAND FAILED: #{command} #{args.join(' ')}".strip
 	end
-ensure
-	ENV['TOOL_LEVEL'] = TOOL_LEVEL.to_s
 end
 
 # Check whether the specified command is in $PATH, and return its
@@ -67,7 +69,7 @@ def load_config
 		end
 	end
 	all_config = YAML.load_file(filename)
-	$TOOL_CONFIG = all_config[File.basename($0)]
+	$TOOL_CONFIG = all_config[File.basename($0)] || {}
 end
 
 def config(name)

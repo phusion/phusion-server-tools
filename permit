@@ -51,7 +51,7 @@ dirs.each do |dir|
 	Dir.chdir(dir) do
 		executable_files = "/tmp/executable-files.#{$$}"
 		sh "find -type f -executable -print0 > #{executable_files}"
-		if read_write
+		if options[:read_write]
 			sh "find -type f -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:rw-"
 			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:rwx"
 			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -d -m user:#{username}:rwx"

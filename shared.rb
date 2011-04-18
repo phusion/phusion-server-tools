@@ -1,3 +1,6 @@
+TOOLS_DIR = File.expand_path(File.dirname(__FILE__))
+ENV['PATH'] = "#{TOOLS_DIR}:#{ENV['PATH']}"
+
 def sh(command, *args)
 	puts "# #{command} #{args.join(' ')}"
 	if !system(command, *args)

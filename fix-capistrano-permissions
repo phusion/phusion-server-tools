@@ -1,38 +1,78 @@
-#!/bin/bash
-CAPISTRANO_DIR=/u/apps
-WWW_USER=www-data
+#!/usr/bin/env ruby
+require File.expand_path(File.dirname(__FILE__) + '/shared')
 
-export PATH="/tools:$PATH"
+CAPISTRANO_DIR = '/u/apps'
+WWW_USER = 'www-data'
 
-chmod -R g+w,o-rwx $CAPISTRANO_DIR
-setfacl -m user:$WWW_USER:--x $CAPISTRANO_DIR
-setfacl -d -m user:$WWW_USER:r-x $CAPISTRANO_DIR
-for DIR in $CAPISTRANO_DIR/*; do
-    # Give the web server read-only access to everything.
-    # We tighten up permissions in later commands.
-    permit $WWW_USER $DIR
-    
-    # Make the application directory itself executable-only
-    # by the web server.
-    if [[ -d $DIR/releases || -d $DIR/shared ]]; then
-        setfacl -m user:$WWW_USER:--x $DIR
-        setfacl -d -m user:$WWW_USER:--x $DIR
-    fi
-    
-    # Make the 'releases' directory and immediate
-    # subdirectories executable-only by the web server.
-    if [[ -d $DIR/releases ]]; then
-        setfacl -m user:$WWW_USER:--x $DIR/releases
-        setfacl -m user:$WWW_USER:--x $DIR/releases/*
-    fi
-    
-    # Deny web server access to the 'shared' directory.
-    if [[ -d $DIR/shared ]]; then
-        deny $WWW_USER $DIR/shared
-        # If you store attachment files in the 'shared'
-        # directory then you can allow only access to that:
-        #
-        # setfacl -m user:$WWW_USER:--x $DIR/shared
-        # permit $DIR/shared/attachments
-    fi
-done
+# Set the permissions on a /u/apps/.../releases/... directory.
+def set_permissions_on_release_dir(dir)
+	# Executable access to the directory itself
+	# so that the web server can access subdirectories.
+	sh "setfacl -m user:#{WWW_USER}:--x #{dir}"
+	
+	# Read-only access to the 'public' directory so that
+	# the web server can serve static assets.
+	if File.directory?("#{dir}/public")
+		sh "permit #{WWW_USER} #{dir}/public"
+	end
+	
+	# Executable access to the 'config' directory so that
+	# Phusion Passenger's app autodetection works.
+	if File.directory?("#{dir}/config")
+		sh "setfacl -m user:#{WWW_USER}:--x #{dir}/config"
+	end
+end
+
+# Set the permissions on a /u/apps/... directory.
+def set_permissions_on_app_dir(dir)
+	# Give the web server read-only access to everything.
+	# We tighten up permissions in later commands.
+	sh "permit #{WWW_USER} #{dir}"
+	
+	# Make the application directory itself executable-only
+	# by the web server.
+	if File.directory?("#{dir}/releases") || File.directory?("#{dir}/shared")
+		sh "setfacl -m user:#{WWW_USER}:--x #{dir}"
+		sh "setfacl -d -m user:#{WWW_USER}:--x #{dir}"
+	end
+	
+	# Make the 'releases' directory executable-only by the web server
+	# and set correct permissions on each release subdirectory.
+	if File.directory?("#{dir}/releases")
+		sh "setfacl -m user:#{WWW_USER}:--x #{dir}/releases"
+		Dir["#{dir}/releases/*"].each do |release_subdir|
+			set_permissions_on_release_dir(release_subdir)
+		end
+	end
+	
+	# Deny web server access to everything in the 'shared'
+	# directory, with some exceptions.
+	if File.directory?("#{dir}/shared")
+		sh "deny #{WWW_USER} #{dir}/shared"
+		
+		# If there's a Capistrano repository cache, then give
+		# it the same permissions as a release directory because
+		# Capistrano actually makes a release directory but copying
+		# cached-copy with 'cp -dpR', thereby copying all ACLs too.
+		if File.directory?("#{dir}/shared/cached-copy")
+			set_permissions_on_release_dir("#{dir}/shared/cached-copy")
+		end
+		
+		# If you store attachment files in the 'shared'
+		# directory then you can allow read-only access to that:
+		# sh "setfacl -m user:#{WWW_USER}:--x #{dir}/shared"
+		# sh "permit #{dir}/shared/attachments"
+	end
+end
+
+def start
+	sh "chmod -R g+w,o-rwx #{CAPISTRANO_DIR}"
+	sh "setfacl -m user:#{WWW_USER}:--x #{CAPISTRANO_DIR}"
+	sh "setfacl -d -m user:#{WWW_USER}:r-x #{CAPISTRANO_DIR}"
+	
+	Dir["#{CAPISTRANO_DIR}/*"].each do |dir|
+		set_permissions_on_app_dir(dir)
+	end
+end
+
+start

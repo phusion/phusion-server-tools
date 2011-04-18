@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+if !ARGV[0]
+	STDERR.puts "You must specify a queue name."
+	exit 1
+end
+require 'rubygems'
+require 'bunny'
+b = Bunny.new
+b.start
+q = b.queue(ARGV[0], :durable => true)
+q.purge

@@ -1,0 +1,4 @@
+#!/bin/bash
+for F in "$@"; do
+	echo -n > "$F"
+done

@@ -1,15 +1,31 @@
 TOOLS_DIR = File.expand_path(File.dirname(__FILE__))
 ENV['PATH'] = "#{TOOLS_DIR}:#{ENV['PATH']}"
+if ENV['TOOL_LEVEL']
+	TOOL_LEVEL = ENV['TOOL_LEVEL'].to_i
+else
+	TOOL_LEVEL = 0
+end
+
+def print_activity(message)
+	if TOOL_LEVEL == 0
+		puts "# #{message}"
+	else
+		puts "#{TOOL_LEVEL * '  '}-> #{message}"
+	end
+end
 
 def sh(command, *args)
-	puts "# #{command} #{args.join(' ')}"
+	print_activity "# #{command} #{args.join(' ')}"
 	quiet_sh(command, *args)
 end
 
 def quiet_sh(command, *args)
+	ENV['TOOL_LEVEL'] = (TOOL_LEVEL + 1).to_s
 	if !system(command, *args)
 		abort "*** COMMAND FAILED: #{command} #{args.join(' ')}".strip
 	end
+ensure
+	ENV['TOOL_LEVEL'] = TOOL_LEVEL.to_s
 end
 
 # Check whether the specified command is in $PATH, and return its

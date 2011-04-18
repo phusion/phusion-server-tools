@@ -1,7 +1,37 @@
 #!/usr/bin/env ruby
 require File.expand_path(File.dirname(__FILE__) + '/shared')
-CAPISTRANO_DIR = config(:capistrano_dir)
-WWW_USER = config(:www_user)
+require 'optparse'
+
+def parse_options
+	options = {}
+	parser = OptionParser.new do |opts|
+		nl = "\n" + ' ' * 37
+		opts.banner = "Usage: set-capistrano-permissions [options]"
+		opts.separator ""
+		
+		opts.separator "Options:"
+		opts.on("--for-app-dir DIR",
+		        "Set only permissions for the given app#{nl}" +
+		        "directory") do |value|
+			options[:for_app_dir] = value
+		end
+	end
+	begin
+		parser.parse!
+	rescue OptionParser::ParseError => e
+		puts e
+		puts
+		puts "Please see '--help' for valid options."
+		exit 1
+	end
+
+	if options[:help]
+		puts parser
+		exit
+	else
+		return options
+	end
+end
 
 # Set the permissions on a /u/apps/.../releases/... directory.
 def set_permissions_on_release_dir(dir)
@@ -65,13 +95,21 @@ def set_permissions_on_app_dir(dir)
 end
 
 def start
-	sh "chmod -R g+w,o-rwx #{CAPISTRANO_DIR}"
-	sh "setfacl -m user:#{WWW_USER}:--x #{CAPISTRANO_DIR}"
-	sh "setfacl -d -m user:#{WWW_USER}:r-x #{CAPISTRANO_DIR}"
-	
-	Dir["#{CAPISTRANO_DIR}/*"].each do |dir|
-		set_permissions_on_app_dir(dir)
+	options = parse_options
+	if options[:for_app_dir]
+		set_permissions_on_app_dir(options[:for_app_dir])
+	else
+		sh "chmod -R g+w,o-rwx #{CAPISTRANO_DIR}"
+		sh "setfacl -m user:#{WWW_USER}:--x #{CAPISTRANO_DIR}"
+		sh "setfacl -d -m user:#{WWW_USER}:r-x #{CAPISTRANO_DIR}"
+		
+		Dir["#{CAPISTRANO_DIR}/*"].each do |dir|
+			set_permissions_on_app_dir(dir)
+		end
 	end
 end
+
+CAPISTRANO_DIR = config(:capistrano_dir)
+WWW_USER = config(:www_user)
 
 start

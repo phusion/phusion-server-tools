@@ -107,6 +107,6 @@ Garbage collects all git repositories defined in `config.yml`. For convenience, 
 
 In order to preserve file permissions, the `git gc` command is run as the owner of the repository directory. Therefore this tool **must** be run as root.
 
-Make it run every Sunday at 0:00 AM in cron:
+Make it run every Sunday at 0:00 AM in cron with low I/O priority:
 
-    0 0 * * sun /tools/silence-unless-failed /tools/git-gc-repos
+    0 0 * * sun /tools/silence-unless-failed ionice -n 7 /tools/git-gc-repos

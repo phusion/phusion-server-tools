@@ -19,7 +19,7 @@ Each tool has its own prerequities, but here are some common prerequities:
 Some tools require additional configuration through `config.yml`, which must be located in the same directory as the tool or in `/etc/phusion-server-tools.yml`. Please see `config.yml.example` for an example.
 
 
-## Included tools
+## Backup
 
 ### backup-mysql - Rotating MySQL dumps
 
@@ -30,6 +30,9 @@ It uses `mysql` to obtain a list of databases and `mysqldump` to dump the databa
 Make it run daily at 0:00 AM in cron:
 
     0 0 * * * /tools/silence-unless-failed /tools/backup-mysql
+
+
+## File management
 
 ### permit and deny - Easily set fine-grained permissions using ACLs
 
@@ -58,6 +61,13 @@ You must also make sure your filesystem is mounted with ACL support, e.g.:
 
 Don't forget to update /etc/fstab too.
 
+### truncate
+
+Truncates the all passed files to 0 bytes.
+
+
+## RabbitMQ
+
 ### display-queue - Display statistics for local RabbitMQ queues
 
 This tool displays statistics for RabbitMQ queues in a more friendly formatter than `rabbitmqctl list_queues`. The meanings of the columns are as follows:
@@ -82,12 +92,21 @@ This tool displays statistics for RabbitMQ queues in a more friendly formatter t
 
 This script monitors all RabbitMQ queues on the localhost RabbitMQ installation and sends an email if one of them contain more messages than a defined threshold. You can configure the settings in `config.yml`.
 
-### truncate
 
-Truncates the all passed files to 0 bytes.
+## Other
 
 ### silcence-unless-failed
 
 Runs the given command but only print its output (both STDOUT and STDERR) if its exit code is non-zero. The script's own exit code is the same as the command's exit code.
 
     /tools/silence-unless-failed my-command arg1 arg2 --arg3
+
+### gc-git-repos
+
+Garbage collects all git repositories defined in `config.yml`. For convenience, the list of repositories to garbage collect can be a glob, e.g. `/u/apps/**/*.git`.
+
+In order to preserve file permissions, the `git gc` command is run as the owner of the repository directory. Therefore this tool **must** be run as root.
+
+Make it run every Sunday at 0:00 AM in cron:
+
+    0 0 * * sun /tools/silence-unless-failed /tools/git-gc-repos

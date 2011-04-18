@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 require File.expand_path(File.dirname(__FILE__) + '/shared')
-
-CAPISTRANO_DIR = '/u/apps'
-WWW_USER = 'www-data'
+CAPISTRANO_DIR = config(:capistrano_dir)
+WWW_USER = config(:www_user)
 
 # Set the permissions on a /u/apps/.../releases/... directory.
 def set_permissions_on_release_dir(dir)

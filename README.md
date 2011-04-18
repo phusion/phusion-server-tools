@@ -1,7 +1,7 @@
 # Phusion Server Tools
 
 A collection of server administration tools that we use. Everything is
-written in Ruby and are designed to work with Debian. These scripts may
+written in Ruby and designed to work with Debian. These scripts may
 work with other operating systems or distributions as well, but it's not
 tested.
 

@@ -7,7 +7,7 @@ tested.
 
 Install with:
 
-    git clone https://FooBarWidget@github.com/FooBarWidget/phusion-server-tools.git /tools
+    git clone https://github.com/FooBarWidget/phusion-server-tools.git /tools
 
 It's not necessary to install to /tools, you can install to anywhere, but this document assumes that you have installed to /tools.
 

@@ -41,11 +41,16 @@ end
 
 def load_config
 	require 'yaml'
-	if !File.exist?("#{TOOLS_DIR}/config.yml")
-		abort "*** ERROR: you must create a #{TOOLS_DIR}/config.yml. " +
-			"Please see #{TOOLS_DIR}/config.yml.example for an example."
+	filename = "#{TOOLS_DIR}/config.yml"
+	if !File.exist?(filename)
+		filename = "/etc/phusion-server-tools.yml"
+		if !File.exist?(filename)
+			abort "*** ERROR: you must create #{TOOLS_DIR}/config.yml or " +
+				"/etc/phusion-server-tools.yml. " +
+				"Please see #{TOOLS_DIR}/config.yml.example for an example."
+		end
 	end
-	all_config = YAML.load_file("#{TOOLS_DIR}/config.yml")
+	all_config = YAML.load_file(filename)
 	$TOOL_CONFIG = all_config[File.basename($0)]
 end
 

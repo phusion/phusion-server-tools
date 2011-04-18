@@ -16,6 +16,8 @@ Each tool has its own prerequities, but here are some common prerequities:
  * Ruby (obviously)
  * `pv` - `apt-get install pv`. Not required but very useful; allows display of progress bars.
 
+Some tools require additional configuration through `config.yml`, which must be located in the same directory as the tool or in `/etc/phusion-server-tools.yml`. Please see `config.yml.example` for an example.
+
 
 ## Included tools
 
@@ -70,11 +72,15 @@ This tool displays statistics for RabbitMQ queues in a more friendly formatter t
 
 `watch-queue` combines the `watch` tool with `display-queue`. It continuously displays the latest queue statistics and highlights changes.
 
-### purge-queue - Removes all messages from a local RabbitMQ queue
+### purge-queue - Remove all messages from a local RabbitMQ queue
 
 `purge-queue` removes all messages from given given RabbitMQ queue. It connects to a RabbitMQ server on localhost on the default port. Note that consumed-but-unacknowledged messages in the queue cannot be removed.
 
     purge-queue <QUEUE NAME HERE>
+
+### notify-if-queue-becomes-large - Monitor RabbitMQ queue sizes
+
+This script monitors all RabbitMQ queues on the localhost RabbitMQ installation and sends an email if one of them contain more messages than a defined threshold. You can configure the settings in `config.yml`.
 
 ### truncate
 

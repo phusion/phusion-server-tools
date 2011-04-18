@@ -63,7 +63,7 @@ Don't forget to update /etc/fstab too.
 
 ### truncate
 
-Truncates the all passed files to 0 bytes.
+Truncates all passed files to 0 bytes.
 
 
 ## RabbitMQ

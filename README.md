@@ -56,6 +56,7 @@ You should run monitor-cpu with daemon tools:
     setuidgid daemon /tools/monitor-cpu 2>&1 | \
     setuidgid daemon logger -t monitor-cpu
     EOF
+    chmod +x /etc/service/monitor-cpu/run.tmp
     mv /etc/service/monitor-cpu/run.tmp /etc/service/monitor-cpu/run
 
 ### notify-if-queue-becomes-large - Monitor RabbitMQ queue sizes

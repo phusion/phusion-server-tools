@@ -57,6 +57,10 @@ You should run monitor-cpu with daemon tools:
     EOF
     mv /etc/service/monitor-cpu/run.tmp /etc/service/monitor-cpu/run
 
+### notify-if-queue-becomes-large - Monitor RabbitMQ queue sizes
+
+This script monitors all RabbitMQ queues on the localhost RabbitMQ installation and sends an email if one of them contain more messages than a defined threshold. You can configure the settings in `config.yml`.
+
 
 ## File management
 
@@ -116,7 +120,7 @@ This tool displays statistics for RabbitMQ queues in a more friendly formatter t
 
 ### notify-if-queue-becomes-large - Monitor RabbitMQ queue sizes
 
-This script monitors all RabbitMQ queues on the localhost RabbitMQ installation and sends an email if one of them contain more messages than a defined threshold. You can configure the settings in `config.yml`.
+See the related documentation under "Monitoring and alerting".
 
 
 ## Other

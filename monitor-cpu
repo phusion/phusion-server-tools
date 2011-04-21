@@ -1,0 +1,160 @@
+#!/usr/bin/env ruby
+require File.expand_path(File.dirname(__FILE__) + '/shared')
+
+class MonitorCpu
+	def initialize(interval, threshold)
+		@interval   = interval
+		@threshold  = threshold
+		@start_time = Time.now
+		@iteration  = 1
+		@cpu_usages = []
+	end
+	
+	def start
+		while true
+			measure_and_take_action!
+		end
+	end
+	
+	def measure_and_take_action!
+		@cpu_usages.shift if @cpu_usages.size >= @interval
+		@cpu_usages << measure_cpu_usage
+		if current_time - @start_time >= @interval * 60 && average >= @threshold
+			send_alert
+			sleep(60)
+			@start_time = current_time
+			@iteration  = 1
+			@cpu_usages.clear
+			return true
+		else
+			sleep_time = next_wake_time - current_time
+			sleep(sleep_time) if sleep_time > 0
+			@iteration += 1
+			return false
+		end
+	end
+	
+	def measurement_points
+		return @cpu_usages.size
+	end
+	
+	def average
+		total = @cpu_usages.inject(0) { |a, b| a + b }
+		return total / @cpu_usages.size
+	end
+
+private
+	def sleep(sleep_time)
+		Kernel.sleep(sleep_time)
+	end
+	
+	def current_time
+		return Time.now
+	end
+	
+	def measure_cpu_usage
+		stat = `mpstat`.split("\n").last
+		if stat
+			idle = stat.split(/[\s\t]+/)[9].to_f
+			return 100 - idle
+		else
+			return 0
+		end
+	end
+	
+	def next_wake_time
+		return @start_time + @iteration * 60
+	end
+	
+	def send_alert
+		email(config(:from), config(:to), config(:subject),
+			"Average CPU usage over the past #{@interval} minutes is >= #{@threshold}%.")
+	end
+end
+
+if defined?(Spec) || defined?(RSpec)
+	describe MonitorCpu do
+		before :each do
+			@monitor = MonitorCpu.new(5, 90)
+			@monitor.stub!(:sleep).and_return do |sleep_time|
+				new_time = @monitor.send(:current_time) + sleep_time
+				@monitor.stub!(:current_time).and_return(new_time)
+			end
+			@monitor.stub!(:send_alert)
+			@now = Time.now
+		end
+		
+		def mock_time(minutes_passed)
+			@monitor.stub!(:current_time).and_return(@now + minutes_passed * 60)
+		end
+		
+		def mock_cpu_usage(usage)
+			@monitor.stub!(:measure_cpu_usage).and_return(usage)
+		end
+		
+		it "sends an alert and resets the state when the average CPU over a period of time exceeds the threshold" do
+			5.times do |i|
+				mock_time(i)
+				mock_cpu_usage(100)
+				@monitor.measure_and_take_action!.should be_false
+				@monitor.measurement_points.should == i + 1
+				@monitor.average.should == 100
+			end
+			
+			mock_time(5)
+			mock_cpu_usage(100)
+			@monitor.measure_and_take_action!.should be_true
+			@monitor.measurement_points.should == 0
+			
+			5.times do |i|
+				mock_time(6 + i)
+				mock_cpu_usage(100)
+				@monitor.measure_and_take_action!.should be_false
+				@monitor.measurement_points.should == i + 1
+				@monitor.average.should == 100
+			end
+			
+			mock_time(11)
+			mock_cpu_usage(100)
+			@monitor.measure_and_take_action!.should be_true
+			@monitor.measurement_points.should == 0
+		end
+		
+		it "deletes old measurement points that are no longer relevant" do
+			5.times do |i|
+				mock_time(i)
+				mock_cpu_usage(50)
+				@monitor.measure_and_take_action!.should be_false
+				@monitor.measurement_points.should == i + 1
+			end
+			
+			mock_time(5)
+			mock_cpu_usage(50)
+			@monitor.measure_and_take_action!.should be_false
+			@monitor.measurement_points.should == 5
+			@monitor.average.should == 50
+			
+			mock_time(6)
+			mock_cpu_usage(100)
+			@monitor.measure_and_take_action!.should be_false
+			@monitor.measurement_points.should == 5
+			@monitor.average.should == 60
+		end
+	end
+	
+else
+	config(:from)
+	config(:to)
+	config(:subject)
+	begin
+		MonitorCpu.new(config(:interval), config(:threshold)).start
+	rescue Interrupt
+		# Do nothing.
+	rescue SignalException => e
+		if e.message == "SIGTERM"
+			# Do nothing
+		else
+			raise
+		end
+	end
+end

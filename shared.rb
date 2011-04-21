@@ -80,3 +80,13 @@ def config(name)
 	end
 	return value
 end
+
+def email(from, to, subject, body)
+	IO.popen("sendmail -t", "w") do |f|
+		f.puts "To: #{to}"
+		f.puts "From: #{from}"
+		f.puts "Subject: #{subject}"
+		f.puts
+		f.puts body
+	end
+end

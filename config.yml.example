@@ -11,3 +11,10 @@ notify-if-queue-becomes-large:
   to: your@email.com
   from: your@server.com
   subject: Queue going out of control
+
+monitor-cpu:
+  threshold: 90
+  interval: 60
+  to: your@gmail.com
+  from: your@server.com
+  subject: CPU usage out of control

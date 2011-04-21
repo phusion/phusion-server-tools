@@ -52,7 +52,8 @@ You should run monitor-cpu with daemon tools:
 
     mkdir -p /etc/service/monitor-cpu
     cat <<EOF > /etc/service/monitor-cpu/run.tmp
-    setuidgid daemon /tools/monitor-cpu | \
+    #!/bin/bash
+    setuidgid daemon /tools/monitor-cpu 2>&1 | \
     setuidgid daemon logger -t monitor-cpu
     EOF
     mv /etc/service/monitor-cpu/run.tmp /etc/service/monitor-cpu/run

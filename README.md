@@ -32,6 +32,32 @@ Make it run daily at 0:00 AM in cron:
     0 0 * * * /tools/silence-unless-failed /tools/backup-mysql
 
 
+## Monitoring and alerting
+
+### monitor-cpu - Monitors CPU usage and send email on suspicious activity
+
+A daemon which measures the CPU usage every minute, and sends an email if the average usage usage over a period of time equals or exceeds a threshold.
+
+Config options:
+
+  * threshold: The CPU usage threshold (0%-100%) to check against.
+  * interval: The interval, in minutes, over which the average is calculated.
+  * to, from, subject: Configuration for the email alert.
+
+monitor-cpu requires the `mpstat` command. Install with:
+
+    apt-get install sysstat
+
+You should run monitor-cpu with daemon tools:
+
+    mkdir -p /etc/service/monitor-cpu
+    cat <<EOF > /etc/service/monitor-cpu/run.tmp
+    setuidgid daemon /tools/monitor-cpu | \
+    setuidgid daemon logger -t monitor-cpu
+    EOF
+    mv /etc/service/monitor-cpu/run.tmp /etc/service/monitor-cpu/run
+
+
 ## File management
 
 ### permit and deny - Easily set fine-grained permissions using ACLs

@@ -67,8 +67,9 @@ private
 	end
 	
 	def send_alert
+		average = sprintf("%.1f", self.average)
 		email(config(:from), config(:to), config(:subject),
-			"Average CPU usage over the past #{@interval} minutes is >= #{@threshold}%.")
+			"Average CPU usage over the past #{@interval} minutes is #{average}% (>= #{@threshold}%).")
 	end
 end
 

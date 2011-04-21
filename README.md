@@ -61,6 +61,10 @@ You should run monitor-cpu with daemon tools:
 
 This script monitors all RabbitMQ queues on the localhost RabbitMQ installation and sends an email if one of them contain more messages than a defined threshold. You can configure the settings in `config.yml`.
 
+Run it every 15 minutes in cron:
+
+    0,15,30,45 * * * * /tools/notify-if-queue-becomes-large
+
 
 ## File management
 

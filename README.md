@@ -44,17 +44,15 @@ Config options:
   * interval: The interval, in minutes, over which the average is calculated.
   * to, from, subject: Configuration for the email alert.
 
-monitor-cpu requires the `mpstat` command. Install with:
-
-    apt-get install sysstat
-
 You should run monitor-cpu with daemon tools:
 
     mkdir -p /etc/service/monitor-cpu
     cat <<EOF > /etc/service/monitor-cpu/run.tmp
     #!/bin/bash
-    setuidgid daemon /tools/monitor-cpu 2>&1 | \
-    setuidgid daemon logger -t monitor-cpu
+    set -em
+    setuidgid daemon /tools/monitor-cpu 2>&1 | setuidgid daemon logger -t monitor-cpu &
+    trap "kill $(jobs -p)" EXIT
+    fg %1 >/dev/null
     EOF
     chmod +x /etc/service/monitor-cpu/run.tmp
     mv /etc/service/monitor-cpu/run.tmp /etc/service/monitor-cpu/run

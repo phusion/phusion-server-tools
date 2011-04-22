@@ -55,11 +55,19 @@ private
 	end
 	
 	def measure_cpu_usage
-		stat = `mpstat`.split("\n").last
-		if stat
-			idle = stat.split(/[\s\t]+/)[9].to_f
+		# 'top' displays the wrong CPU usage the first time so we pass -n 2.
+		idle = nil
+		lines = `top -b -d 0.01 -n 2 -p 1`.split("\n")
+		lines.each do |line|
+			if line =~ /Cpu\(s\):.*?(\d+.\d+)%id/
+				idle = $1.to_f
+			end
+		end
+		if idle
 			return 100 - idle
 		else
+			STDERR.puts "Could not measure CPU usage: " +
+				"no such information found in `top` output."
 			return 0
 		end
 	end

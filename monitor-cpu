@@ -17,7 +17,9 @@ class MonitorCpu
 	end
 	
 	def measure_and_take_action!
-		@cpu_usages.shift if @cpu_usages.size >= @interval
+		while @cpu_usages.size >= @interval
+			@cpu_usages.shift
+		end
 		@cpu_usages << measure_cpu_usage
 		if current_time - @start_time >= @interval * 60 && average >= @threshold
 			send_alert

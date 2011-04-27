@@ -157,4 +157,4 @@ Consider two hypothetical servers, `backup.org` and `production.org`. Once in a 
 
     command="/tools/confine-to-rsync /directory1 /directory2",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-dss AAAAB3Nza(...rest of backup.org's key here...)
 
-`confine-to-rsync` checks whether the client is trying to execute rsync, and if so, whether the rsync is only being run on either /directory1 or /directory2. If not it will abort with an error.
+`confine-to-rsync` checks whether the client is trying to execute rsync in server mode, and if so, whether the rsync is only being run on either /directory1 or /directory2. If not it will abort with an error.

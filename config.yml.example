@@ -1,4 +1,5 @@
 backup-mysql:
+  max-backups: 10
   # Uncomment to configure encryption:
   #encrypt:
   #  # Your encryption key's email address.

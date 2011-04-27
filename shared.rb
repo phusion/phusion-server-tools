@@ -81,6 +81,16 @@ def config(name)
 	return value
 end
 
+def optional_config(name, default = nil)
+	load_config if !$TOOL_CONFIG
+	name = name.to_s
+	if $TOOL_CONFIG.has_key?(name)
+		return $TOOL_CONFIG[name]
+	else
+		return default
+	end
+end
+
 def email(from, to, subject, body)
 	IO.popen("sendmail -t", "w") do |f|
 		f.puts "To: #{to}"

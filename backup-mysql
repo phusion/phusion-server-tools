@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require File.expand_path(File.dirname(__FILE__) + '/shared')
 BACKUP_DIR_ROOT = "/var/backups/mysql"
-MAX_BACKUPS = 10
+MAX_BACKUPS = optional_config(:max_backups, 10)
 
 if enc = config(:encrypt)
 	abort "*** ERROR: please set the configuration option backup-mysql.encrypt.key" if !enc['key']
@@ -32,7 +32,7 @@ for database in databases
 	sh "#{dump_command} | #{pv_or_cat} > #{backup_dir}/#{database}.#{extension}"
 end
 
-puts "Cleaning up..."
+puts "Cleaning up, keeping only #{MAX_BACKUPS} most recent backups..."
 dirs = Dir["#{BACKUP_DIR_ROOT}/*"].sort.reverse
 keep = dirs[0..MAX_BACKUPS]
 delete = dirs - keep

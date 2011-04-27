@@ -23,7 +23,7 @@ Some tools require additional configuration through `config.yml`, which must be 
 
 ### backup-mysql - Rotated, compressed, encrypted MySQL dumps
 
-A script which backs up all MySQL databases to `/var/backups/mysql`. At most 10 backups are kept. All backups are compressed with gzip and can optionally be encrypted. The backup directory is denied all world access.
+A script which backs up all MySQL databases to `/var/backups/mysql`. By default at most 10 backups are kept, but this can be configured. All backups are compressed with gzip and can optionally be encrypted. The backup directory is denied all world access.
 
 It uses `mysql` to obtain a list of databases and `mysqldump` to dump the database contents. If you want to run this script unattended you should therefore set the right login information in `~/.my.cnf`, sections `[mysql]` and `[mysqldump]`.
 

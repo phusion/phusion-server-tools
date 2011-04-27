@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 require File.expand_path(File.dirname(__FILE__) + '/shared')
 BACKUP_DIR_ROOT = "/var/backups/mysql"
-MAX_BACKUPS = optional_config(:max_backups, 10)
+MAX_BACKUPS = optional_config('max-backups', 10)
 
 if enc = config(:encrypt)
 	abort "*** ERROR: please set the configuration option backup-mysql.encrypt.key" if !enc['key']

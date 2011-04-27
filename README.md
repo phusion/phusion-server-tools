@@ -21,15 +21,17 @@ Some tools require additional configuration through `config.yml`, which must be 
 
 ## Backup
 
-### backup-mysql - Rotating MySQL dumps
+### backup-mysql - Rotated, compressed, encrypted MySQL dumps
 
-A script which backs up all MySQL databases to `/var/backups/mysql`. At most 10 backups are kept. All backups are compressed with gzip. The backup directory is denied all world access.
+A script which backs up all MySQL databases to `/var/backups/mysql`. At most 10 backups are kept. All backups are compressed with gzip and can optionally be encrypted. The backup directory is denied all world access.
 
 It uses `mysql` to obtain a list of databases and `mysqldump` to dump the database contents. If you want to run this script unattended you should therefore set the right login information in `~/.my.cnf`, sections `[mysql]` and `[mysqldump]`.
 
-Make it run daily at 0:00 AM in cron:
+Encryption can be configured through the 'encrypt' option in config.yml.
 
-    0 0 * * * /tools/silence-unless-failed /tools/backup-mysql
+Make it run daily at 12:00 AM and 0:00 AM in cron:
+
+    0 0,12 * * * /tools/silence-unless-failed /tools/backup-mysql
 
 
 ## Monitoring and alerting

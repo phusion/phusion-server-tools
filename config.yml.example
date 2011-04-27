@@ -1,3 +1,13 @@
+backup-mysql:
+  # Uncomment to configure encryption:
+  #encrypt:
+  #  # Your encryption key's email address.
+  #  key: backup@yourserver.com
+  #  # Email addresses of people to encrypt for.
+  #  recipients:
+  #    - admin1@yourserver.com
+  #    - admin2@yourserver.com
+
 set-capistrano-permissions:
   capistrano_dir: /u/apps
   www_user: www-data

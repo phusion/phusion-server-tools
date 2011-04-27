@@ -3,6 +3,15 @@ require File.expand_path(File.dirname(__FILE__) + '/shared')
 BACKUP_DIR_ROOT = "/var/backups/mysql"
 MAX_BACKUPS = 10
 
+if enc = config(:encrypt)
+	abort "*** ERROR: please set the configuration option backup-mysql.encrypt.key" if !enc['key']
+	abort "*** ERROR: please set the configuration option backup-mysql.encrypt.recipients" if !enc['recipients'] || enc['recipients'].empty?
+	encrypt_command = "gpg --sign --encrypt -u '#{enc['key']}'"
+	enc['recipients'].each do |recipient|
+		encrypt_command << " --recipient '#{recipient}'"
+	end
+end
+
 databases = `echo show databases | mysql`.strip.split("\n")
 databases.shift
 databases.delete("information_schema")
@@ -13,7 +22,14 @@ backup_dir = "#{BACKUP_DIR_ROOT}/#{now}"
 
 sh "mkdir -p #{backup_dir}"
 for database in databases
-	sh "mysqldump #{database} | gzip --best | #{pv_or_cat} > #{backup_dir}/#{database}.sql.gz"
+	dump_command = "mysqldump #{database} | gzip --best"
+	if encrypt_command
+		dump_command << " | #{encrypt_command}"
+		extension = "sql.gz.gpg"
+	else
+		extension = "sql.gz"
+	end
+	sh "#{dump_command} | #{pv_or_cat} > #{backup_dir}/#{database}.#{extension}"
 end
 
 puts "Cleaning up..."

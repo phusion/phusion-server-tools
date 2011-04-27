@@ -146,3 +146,15 @@ In order to preserve file permissions, the `git gc` command is run as the owner 
 Make it run every Sunday at 0:00 AM in cron with low I/O priority:
 
     0 0 * * sun /tools/silence-unless-failed ionice -n 7 /tools/git-gc-repos
+
+### confine-to-rsync
+
+To be used in combination with SSH for confining an account to only rsync access. Very useful for locking down automated backup users.
+
+Consider two hypothetical servers, `backup.org` and `production.org`. Once in a while backup.org runs an automated `rsync` command, copying data from production.org to its local disk. Backup.org's SSH key is installed on production.org. If someone hacks into backup.org we don't want it to be able to login to production.org or do anything else that might cause damage, so we need to make sure that backup.org can only rsync from production.org, and only for certain directories.
+
+`confine-to-rsync` is to be installed into production.org's `authorized_keys` file as execution command:
+
+    command="/tools/confine-to-rsync /directory1 /directory2",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-dss AAAAB3Nza(...rest of backup.org's key here...)
+
+`confine-to-rsync` checks whether the client is trying to execute rsync, and if so, whether the rsync is only being run on either /directory1 or /directory2. If not it will abort with an error.

@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+RSYNC_COMMAND_START = "rsync --server --sender "
+RSYNC_OPTIONS_FORMAT = /-[a-z0-9\.]+ /i
+
+if ARGV.empty?
+	abort "*** You must pass a list of directories that rsync is allowed to access"
+end
+
+command = ENV['SSH_ORIGINAL_COMMAND'].to_s.dup
+if !command
+	abort "*** $SSH_ORIGINAL_COMMAND not set"
+end
+
+if !command.start_with?(RSYNC_COMMAND_START)
+	abort "*** Only rsync is allowed"
+end
+command.gsub!(/^#{Regexp.escape RSYNC_COMMAND_START}/, '')
+
+if command !~ /\A#{RSYNC_OPTIONS_FORMAT}/i
+	abort "*** Invalid rsync options detected"
+end
+command.gsub!(/\A#{RSYNC_OPTIONS_FORMAT}/, '')
+
+dirs = command.split(/ +/)
+if dirs.size < 2
+	abort "*** No directories passed to rsync"
+end
+
+if dirs.first != "."
+	abort "*** Invalid rsync directory arguments"
+end
+dirs.shift
+
+allowed_dirs = []
+ARGV.each do |dir|
+	allowed_dirs << File.expand_path(dir).sub(/\/\Z/, '')
+end
+
+dirs.each do |dir|
+	dir = File.expand_path(dir).sub(/\/\Z/, '')
+	if !allowed_dirs.include?(dir)
+		abort "*** rsync is not allowed to access #{dir}"
+	end
+end
+
+exec(ENV['SSH_ORIGINAL_COMMAND'])

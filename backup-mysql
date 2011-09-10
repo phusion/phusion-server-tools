@@ -22,7 +22,7 @@ backup_dir = "#{BACKUP_DIR_ROOT}/#{now}"
 
 sh "mkdir -p #{backup_dir}"
 for database in databases
-	dump_command = "mysqldump #{database} | gzip --best"
+	dump_command = "mysqldump --single-transaction -C #{database} | gzip --best"
 	if encrypt_command
 		dump_command << " | #{encrypt_command}"
 		extension = "sql.gz.gpg"

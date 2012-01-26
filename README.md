@@ -69,6 +69,14 @@ Run it every 15 minutes in cron:
 
     0,15,30,45 * * * * /tools/notify-if-queue-becomes-large
 
+### check-web-apps - Checks web applications' health
+
+This script sends HTTP requests to all listed web applications and checks whether the response contains a certain substring. If not, an email is sent.
+
+Install into cron and have it run every 10 minutes:
+
+    0,10,20,30,40,50 * * * * /tools/check-web-apps
+
 
 ## File management
 

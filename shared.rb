@@ -91,6 +91,10 @@ def optional_config(name, default = nil)
 	end
 end
 
+def hostname
+	return `hostname`.strip
+end
+
 def email(from, to, subject, body)
 	to = to.join(", ") if to.is_a?(Array)
 	IO.popen("sendmail -t", "w") do |f|

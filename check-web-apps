@@ -1,0 +1,39 @@
+#!/usr/bin/env ruby
+require File.expand_path(File.dirname(__FILE__) + '/shared')
+require 'uri'
+require 'net/http'
+require 'net/https'
+
+def check(web_app)
+	response = http_get(web_app['url'], web_app['username'], web_app['password'])
+	if !response.body.include?(web_app['substring'])
+		domain = URI.parse(web_app['url']).host
+		email(config(:from), config(:to),
+			sprintf("[#{hostname}] #{config(:subject)}", domain),
+			"A web application is down!\n" +
+			"URL: #{web_app['url']}\n")
+	end
+end
+
+def http_get(url, username = nil, password = nil)
+	headers = {}
+	uri = URI.parse(url)
+	http = Net::HTTP.new(uri.host, uri.port)
+	if uri.scheme == 'https'
+		http.use_ssl = true
+		http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+	end
+	http.start do
+		req = Net::HTTP::Get.new(uri.path, headers)
+		req.basic_auth(username, password) if username
+		http.request(req)
+	end
+end
+
+def start
+	config(:web_apps).each do |web_app|
+		check(web_app)
+	end
+end
+
+start

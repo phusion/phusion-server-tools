@@ -30,3 +30,15 @@ monitor-cpu:
   to: your@gmail.com
   from: your@server.com
   subject: CPU usage out of control
+
+check-web-apps:
+  to: your@gmail.com
+  from: your@server.com
+  subject: Web application %s down
+  web_apps:
+    - url: http://app1.com/
+      substring: Welcome to App1.com.
+      #username: admin
+      #password: 123456
+    #- url: http://app2.com/
+    #- url: http://app3.com/

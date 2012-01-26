@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require File.expand_path(File.dirname(__FILE__) + '/shared')
+require 'pp'
 
 class MonitorCpu
 	def initialize(interval, total_threshold, per_core_threshold)
@@ -40,7 +41,7 @@ class MonitorCpu
 	def measurement_points
 		return @cpu_usages.size
 	end
-	
+
 	def average(cpu_id = :all)
 		total = 0
 		@cpu_usages.each do |cpu_usage|
@@ -235,7 +236,12 @@ else
 	config(:to)
 	config(:subject)
 	begin
-		MonitorCpu.new(config(:interval), config(:total_threshold), config(:per_core_threshold)).start
+		monitor = MonitorCpu.new(config(:interval), config(:total_threshold), config(:per_core_threshold))
+		trap 'QUIT' do
+			pp monitor
+			STDOUT.flush
+		end
+		monitor.start
 	rescue Interrupt
 		# Do nothing.
 	rescue SignalException => e

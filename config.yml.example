@@ -24,7 +24,8 @@ notify-if-queue-becomes-large:
   subject: Queue going out of control
 
 monitor-cpu:
-  threshold: 90
+  total_threshold: 90
+  per_core_threshold: 10
   interval: 60
   to: your@gmail.com
   from: your@server.com

@@ -38,11 +38,12 @@ Make it run daily at 12:00 AM and 0:00 AM in cron:
 
 ### monitor-cpu - Monitors CPU usage and send email on suspicious activity
 
-A daemon which measures the CPU usage every minute, and sends an email if the average usage usage over a period of time equals or exceeds a threshold.
+A daemon which measures the total CPU usage and per-core CPU usage every minute, and sends an email if the average total usage or the average per-core usage over a period of time equals or exceeds a threshold.
 
 Config options:
 
-  * threshold: The CPU usage threshold (0%-100%) to check against.
+  * total_threshold: The total CPU usage threshold (0-100) to check against.
+  * per_core_threshold: The per-core CPU usage threshold (0-100) to check against.
   * interval: The interval, in minutes, over which the average is calculated.
   * to, from, subject: Configuration for the email alert.
 

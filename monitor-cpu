@@ -2,9 +2,10 @@
 require File.expand_path(File.dirname(__FILE__) + '/shared')
 
 class MonitorCpu
-	def initialize(interval, threshold)
+	def initialize(interval, total_threshold, per_core_threshold)
 		@interval   = interval
-		@threshold  = threshold
+		@total_threshold    = total_threshold
+		@per_core_threshold = per_core_threshold
 		@start_time = Time.now
 		@iteration  = 1
 		@cpu_usages = []
@@ -21,8 +22,8 @@ class MonitorCpu
 			@cpu_usages.shift
 		end
 		@cpu_usages << measure_cpu_usage
-		if current_time - @start_time >= @interval * 60 && average >= @threshold
-			send_alert
+		if current_time - @start_time >= @interval * 60 && (exceeded_cpu_id = threshold_exceeded?)
+			send_alert(exceeded_cpu_id)
 			sleep(60)
 			@start_time = current_time
 			@iteration  = 1
@@ -40,9 +41,22 @@ class MonitorCpu
 		return @cpu_usages.size
 	end
 	
-	def average
-		total = @cpu_usages.inject(0) { |a, b| a + b }
+	def average(cpu_id = :all)
+		total = 0
+		@cpu_usages.each do |cpu_usage|
+			total += cpu_usage[cpu_id]
+		end
 		return total / @cpu_usages.size
+	end
+
+	def threshold_exceeded?
+		@cpu_usages.last.each_key do |cpu_id|
+			usage = average(cpu_id)
+			if cpu_id == :all && usage >= @total_threshold || usage >= @per_core_threshold
+				return cpu_id
+			end
+		end
+		return nil
 	end
 
 private
@@ -53,45 +67,76 @@ private
 	def current_time
 		return Time.now
 	end
-	
-	def measure_cpu_usage
-		# 'top' displays the wrong CPU usage the first time so we pass -n 2.
-		idle = nil
-		lines = `top -b -d 0.01 -n 2 -p 1`.split("\n")
-		lines.each do |line|
-			if line =~ /Cpu\(s\):.*?(\d+.\d+)%id/
-				idle = $1.to_f
+
+	def query_cpu_stats
+		result = {}
+		stat = File.read("/proc/stat").split("\n")
+		stat.each do |line|
+			# Filter out the CPU statistics lines.
+			if line =~ /^cpu(\d*) /
+				cpu_id = $1.empty? ? :all : $1.to_i
+				columns = line.split(/\s+/)
+				# Discard the "cpu" prefix.
+				columns.shift
+
+				total = 0
+				idle  = columns[3].to_i
+				columns.each do |column|
+					total += column.to_i
+				end
+				result[cpu_id] = { :total => total, :idle => idle }
 			end
 		end
-		if idle
-			return 100 - idle
-		else
-			STDERR.puts "Could not measure CPU usage: " +
-				"no such information found in `top` output."
-			return 0
+		return result
+	end
+
+	def measure_cpu_usage(sleep_time = 1)
+		stats1 = query_cpu_stats
+		sleep sleep_time
+		stats2 = query_cpu_stats
+
+		result = {}
+		stats1.each_key do |cpu_id|
+			diff_total = stats2[cpu_id][:total] - stats1[cpu_id][:total]
+			diff_idle  = stats2[cpu_id][:idle]  - stats1[cpu_id][:idle]
+			if diff_total == 0
+				diff_usage = 0.0
+			else
+				diff_usage = 100 * (diff_total - diff_idle) / diff_total.to_f
+			end
+			result[cpu_id] = diff_usage
 		end
+
+		return result
 	end
 	
 	def next_wake_time
 		return @start_time + @iteration * 60
 	end
 	
-	def send_alert
-		average = sprintf("%.1f", self.average)
-		email(config(:from), config(:to), config(:subject),
-			"Average CPU usage over the past #{@interval} minutes is #{average}% (>= #{@threshold}%).")
+	def send_alert(exceeded_cpu_id)
+		average = sprintf("%.1f", self.average(exceeded_cpu_id))
+		if exceeded_cpu_id == :all
+			message = "Average total CPU usage over the past #{@interval} minutes is #{average}% (>= #{@total_threshold}%)."
+		else
+			message = "Average CPU usage of core #{exceeded_cpu_id} over the past #{@interval} minutes is #{average}% (>= #{@per_core_threshold}%)."
+		end
+		email(config(:from), config(:to), config(:subject), message)
 	end
 end
 
 if defined?(Spec) || defined?(RSpec)
 	describe MonitorCpu do
 		before :each do
-			@monitor = MonitorCpu.new(5, 90)
+			@monitor = MonitorCpu.new(5, 90, 90)
 			@monitor.stub!(:sleep).and_return do |sleep_time|
 				new_time = @monitor.send(:current_time) + sleep_time
 				@monitor.stub!(:current_time).and_return(new_time)
 			end
-			@monitor.stub!(:send_alert)
+			@monitor.stub!(:email)
+			@monitor.stub!(:config).with(:from).and_return("noreply@phusion.nl")
+			@monitor.stub!(:config).with(:to).and_return("info@phusion.nl")
+			@monitor.stub!(:config).with(:subject).and_return("CPU usage exceeded!")
 			@now = Time.now
 		end
 		
@@ -103,30 +148,62 @@ if defined?(Spec) || defined?(RSpec)
 			@monitor.stub!(:measure_cpu_usage).and_return(usage)
 		end
 		
-		it "sends an alert and resets the state when the average CPU over a period of time exceeds the threshold" do
+		it "sends an alert and resets the state when the average total CPU over a period of time exceeds the threshold" do
 			5.times do |i|
 				mock_time(i)
-				mock_cpu_usage(100)
+				mock_cpu_usage(:all => 100, 0 => 100)
 				@monitor.measure_and_take_action!.should be_false
 				@monitor.measurement_points.should == i + 1
 				@monitor.average.should == 100
 			end
 			
 			mock_time(5)
-			mock_cpu_usage(100)
+			mock_cpu_usage(:all => 100, 0 => 100)
 			@monitor.measure_and_take_action!.should be_true
 			@monitor.measurement_points.should == 0
 			
 			5.times do |i|
 				mock_time(6 + i)
-				mock_cpu_usage(100)
+				mock_cpu_usage(:all => 100, 0 => 100)
 				@monitor.measure_and_take_action!.should be_false
 				@monitor.measurement_points.should == i + 1
 				@monitor.average.should == 100
 			end
 			
 			mock_time(11)
-			mock_cpu_usage(100)
+			mock_cpu_usage(:all => 100, 0 => 100)
+			@monitor.measure_and_take_action!.should be_true
+			@monitor.measurement_points.should == 0
+		end
+
+		it "sends an alert and resets the state when the average CPU of a single core over a period of time exceeds the threshold" do
+			5.times do |i|
+				mock_time(i)
+				mock_cpu_usage(:all => 50, 0 => 100, 1 => 0)
+				@monitor.measure_and_take_action!.should be_false
+				@monitor.measurement_points.should == i + 1
+				@monitor.average.should == 50
+				@monitor.average(0).should == 100
+				@monitor.average(1).should == 0
+			end
+
+			mock_time(5)
+			mock_cpu_usage(:all => 50, 0 => 100, 1 => 0)
+			@monitor.measure_and_take_action!.should be_true
+			@monitor.measurement_points.should == 0
+
+			5.times do |i|
+				mock_time(6 + i)
+				mock_cpu_usage(:all => 50, 0 => 100, 1 => 0)
+				@monitor.measure_and_take_action!.should be_false
+				@monitor.measurement_points.should == i + 1
+				@monitor.average.should == 50
+				@monitor.average(0).should == 100
+				@monitor.average(1).should == 0
+			end
+
+			mock_time(11)
+			mock_cpu_usage(:all => 50, 0 => 100, 1 => 0)
 			@monitor.measure_and_take_action!.should be_true
 			@monitor.measurement_points.should == 0
 		end
@@ -134,22 +211,22 @@ if defined?(Spec) || defined?(RSpec)
 		it "deletes old measurement points that are no longer relevant" do
 			5.times do |i|
 				mock_time(i)
-				mock_cpu_usage(50)
+				mock_cpu_usage(:all => 50, 0 => 50)
 				@monitor.measure_and_take_action!.should be_false
 				@monitor.measurement_points.should == i + 1
 			end
 			
 			mock_time(5)
-			mock_cpu_usage(50)
+			mock_cpu_usage(:all => 70, 0 => 70)
 			@monitor.measure_and_take_action!.should be_false
 			@monitor.measurement_points.should == 5
-			@monitor.average.should == 50
+			@monitor.average.should == (70 + 50 + 50 + 50 + 50) / 5.0
 			
 			mock_time(6)
-			mock_cpu_usage(100)
+			mock_cpu_usage(:all => 100, 0 => 100)
 			@monitor.measure_and_take_action!.should be_false
 			@monitor.measurement_points.should == 5
-			@monitor.average.should == 60
+			@monitor.average.should == (100 + 70 + 50 + 50 + 50) / 5.0
 		end
 	end
 	
@@ -158,7 +235,7 @@ else
 	config(:to)
 	config(:subject)
 	begin
-		MonitorCpu.new(config(:interval), config(:threshold)).start
+		MonitorCpu.new(config(:interval), config(:total_threshold), config(:per_core_threshold)).start
 	rescue Interrupt
 		# Do nothing.
 	rescue SignalException => e

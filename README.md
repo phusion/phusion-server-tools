@@ -141,7 +141,7 @@ Runs the given command but only print its output (both STDOUT and STDERR) if its
 
 ### run
 
-This is a command runner with various features. It redirects the command's stdin to /dev/null, stdout and stderr to the log file given by `--log-file`, waits until the command has exited and returns with the same exit code.
+This is a command runner with various features. It redirects the command's stdin to /dev/null, its stdout and stderr to `tee $GIVEN_LOG_FILE`, waits until the command has exited and returns with the same exit code.
 
 The following features are also available:
 

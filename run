@@ -52,14 +52,28 @@ def start
 		File.open(OPTIONS[:log_file], 'w').close
 		write_status_file('')
 
-		pid = fork do
+		a, b = IO.pipe
+		tee_pid = fork do
+			b.close
+			STDIN.reopen(a)
+			exec("tee", OPTIONS[:log_file])
+		end
+		command_pid = fork do
+			a.close
 			STDIN.reopen("/dev/null", "r")
-			STDOUT.reopen(OPTIONS[:log_file], "w")
-			STDERR.reopen(STDOUT)
+			STDOUT.reopen(b)
+			STDERR.reopen(b)
 			exec(*ARGV)
 		end
+		a.close
+		b.close
 		begin
-			Process.waitpid(pid)
+			Process.waitpid(tee_pid)
+		rescue Errno::ECHILD
+			# Ignore exception.
+		end
+		begin
+			Process.waitpid(command_pid)
 			exit_code = $?.exitstatus
 		rescue Errno::ECHILD
 			exit_code = 1
@@ -79,6 +93,9 @@ def start
 			)
 		end
 		exit(exit_code)
+
+	rescue SystemExit
+		raise
 		
 	rescue Exception => e
 		File.open(OPTIONS[:log_file], 'a') do |f|
@@ -86,6 +103,7 @@ def start
 				e.backtrace.join("\n  "))
 		end
 		raise e
+
 	ensure
 		delete_lock_file(lock_file) if lock_file
 	end

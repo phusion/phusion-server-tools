@@ -1,0 +1,119 @@
+#!/usr/bin/env ruby
+require File.expand_path(File.dirname(__FILE__) + '/shared')
+require 'rubygems'
+require 'optparse'
+require 'escape'
+
+OPTIONS = {}
+
+def parse_options
+	parser = OptionParser.new do |opts|
+		nl = "\n" + ' ' * 37
+		opts.banner = "Usage: ./run-in-background [options] COMMAND..."
+		opts.separator ""
+		
+		opts.separator "Options:"
+		opts.on("--log-file FILE") do |value|
+			OPTIONS[:log_file] = value
+		end
+		opts.on("--status-file FILE") do |value|
+			OPTIONS[:status_file] = value
+		end
+		opts.on("--lock-file FILE") do |value|
+			OPTIONS[:lock_file] = value
+		end
+		opts.on("--email-to ADDRESSES", "Separated by comma") do |value|
+			OPTIONS[:email_to] = value
+		end
+	end
+	begin
+		parser.parse!
+	rescue OptionParser::ParseError => e
+		STDERR.puts e
+		STDERR.puts
+		STDERR.puts "Please see '--help' for valid options."
+		exit 1
+	end
+
+	if !OPTIONS[:log_file]
+		abort "You must specify '--log-file'! See '--help'."
+	elsif ARGV.size < 1
+		STDERR.puts parser
+		exit 1
+	end
+end
+
+def start
+	parse_options
+
+	begin
+		lock_file = create_lock_file
+
+		File.open(OPTIONS[:log_file], 'w').close
+		write_status_file('')
+
+		pid = fork do
+			STDIN.reopen("/dev/null", "r")
+			STDOUT.reopen(OPTIONS[:log_file], "w")
+			STDERR.reopen(STDOUT)
+			exec(*ARGV)
+		end
+		begin
+			Process.waitpid(pid)
+			exit_code = $?.exitstatus
+		rescue Errno::ECHILD
+			exit_code = 1
+		end
+
+		write_status_file(exit_code)
+		if OPTIONS[:email_to]
+			email(
+				OPTIONS[:email_from],
+				OPTIONS[:email_to],
+				"Command finished with exit code #{exit_code}: #{ARGV.join(' ')}",
+				
+				"Command: #{ARGV.join(' ')}\n" +
+				"Exit code: #{exit_code}\n" +
+				"Host: #{`hostname`.strip}\n" +
+				"Log file: #{OPTIONS[:log_file]}\n"
+			)
+		end
+		exit(exit_code)
+		
+	rescue Exception => e
+		File.open(OPTIONS[:log_file], 'a') do |f|
+			f.puts("#{e.class}: #{e.message || e}\n  " +
+				e.backtrace.join("\n  "))
+		end
+		raise e
+	ensure
+		delete_lock_file(lock_file) if lock_file
+	end
+end
+
+def create_lock_file
+	if OPTIONS[:lock_file]
+		File.open(OPTIONS[:lock_file], File::WRONLY | File::EXCL | File::CREAT) do |f|
+			f.puts Process.pid
+		end
+		return true
+	else
+		return nil
+	end
+rescue Errno::EEXIST
+	raise "Lock file #{OPTIONS[:lock_file]} already exists!"
+end
+
+def delete_lock_file(lock_file)
+	File.unlink(OPTIONS[:lock_file])
+end
+
+def write_status_file(content)
+	if OPTIONS[:status_file]
+		File.open(OPTIONS[:status_file], "w") do |f|
+			f.write(content.to_s)
+		end
+	end
+end
+
+start

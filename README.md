@@ -14,6 +14,7 @@ It's not necessary to install to /tools, you can install to anywhere, but this d
 Each tool has its own prerequities, but here are some common prerequities:
 
  * Ruby (obviously)
+ * The `escape` gem - `gem install escape`.
  * `pv` - `apt-get install pv`. Not required but very useful; allows display of progress bars.
 
 Some tools require additional configuration through `config.yml`, which must be located in the same directory as the tool or in `/etc/phusion-server-tools.yml`. Please see `config.yml.example` for an example.
@@ -137,6 +138,16 @@ See the related documentation under "Monitoring and alerting".
 Runs the given command but only print its output (both STDOUT and STDERR) if its exit code is non-zero. The script's own exit code is the same as the command's exit code.
 
     /tools/silence-unless-failed my-command arg1 arg2 --arg3
+
+### run
+
+This is a command runner with various features. It redirects the command's stdin to /dev/null, stdout and stderr to the log file given by `--log-file`, waits until the command has exited and returns with the same exit code.
+
+The following features are also available:
+
+ * `--status-file`: a file for storing the exit code of the command. It is created before the command is run, but is empty initially.
+ * `--lock-file`: `run` will abort with an error if the given lock file already exists. Otherwise, it will create the lock file, write its PID to it and delete the lock file after the command has finished.
+ * `--email-to`: send an email to the given (comma-separated) addresses when the command has finished.
 
 ### gc-git-repos
 

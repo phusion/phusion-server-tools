@@ -92,9 +92,10 @@ def optional_config(name, default = nil)
 end
 
 def email(from, to, subject, body)
+	to = to.join(", ") if to.is_a?(Array)
 	IO.popen("sendmail -t", "w") do |f|
 		f.puts "To: #{to}"
-		f.puts "From: #{from}"
+		f.puts "From: #{from}" if from
 		f.puts "Subject: #{subject}"
 		f.puts
 		f.puts body

@@ -59,17 +59,32 @@ end
 
 def load_config
 	require 'yaml'
-	filename = "#{TOOLS_DIR}/config.yml"
-	if !File.exist?(filename)
-		filename = "/etc/phusion-server-tools.yml"
-		if !File.exist?(filename)
-			abort "*** ERROR: you must create #{TOOLS_DIR}/config.yml or " +
-				"/etc/phusion-server-tools.yml. " +
-				"Please see #{TOOLS_DIR}/config.yml.example for an example."
+	tool_name = File.basename($0)
+	filenames = [
+		"#{TOOLS_DIR}/config/#{tool_name}.yml",
+		"#{TOOLS_DIR}/config/config.yml",
+		"#{TOOLS_DIR}/config.yml",
+		"/etc/phusion-server-tools/#{tool_name}.yml",
+		"/etc/phusion-server-tools/config.yml",
+		"/etc/phusion-server-tools.yml"
+	]
+	config_filename = nil
+	filenames.each do |filename|
+		if File.exist?(filename)
+			config_filename = filename
+			break
 		end
 	end
-	all_config = YAML.load_file(filename)
-	$TOOL_CONFIG = all_config[File.basename($0)] || {}
+	if !config_filename
+		STDERR.puts "*** ERROR: you must create a config file at one of the following locations:\n"
+		filenames.each do |filename|
+			STDERR.puts " * #{filename}"
+		end
+		STDERR.puts "Please see #{TOOLS_DIR}/config.yml.example for an example."
+		exit 1
+	end
+	all_config = YAML.load_file(config_filename)
+	$TOOL_CONFIG = (all_config && all_config[tool_name]) || {}
 end
 
 def config(name)

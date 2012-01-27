@@ -34,7 +34,8 @@ monitor-cpu:
 check-web-apps:
   to: your@gmail.com
   from: your@server.com
-  subject: Web application %s down
+  # The %s is replaced by the web app's domain name.
+  subject: Web application %s is down
   web_apps:
     - url: http://app1.com/
       substring: Welcome to App1.com.

@@ -56,6 +56,8 @@ def start
 		tee_pid = fork do
 			b.close
 			STDIN.reopen(a)
+			# Don't let terminal signals reach this process.
+			Process.setsid
 			exec("tee", OPTIONS[:log_file])
 		end
 		command_pid = fork do
@@ -67,17 +69,29 @@ def start
 		end
 		a.close
 		b.close
+
+		while true
+			begin
+				Process.waitpid(command_pid)
+				exit_code = ($?.exitstatus || 2)
+				command_pid = nil
+				break
+			rescue Errno::ECHILD
+				exit_code = 1
+				command_pid = nil
+				break
+			rescue SignalException => e
+				signame = get_signal_name(e)
+				Process.kill(signame, command_pid)
+			end
+		end
+
 		begin
 			Process.waitpid(tee_pid)
 		rescue Errno::ECHILD
 			# Ignore exception.
 		end
-		begin
-			Process.waitpid(command_pid)
-			exit_code = $?.exitstatus
-		rescue Errno::ECHILD
-			exit_code = 1
-		end
+		tee_pid = nil
 
 		write_status_file(exit_code)
 		if OPTIONS[:email_to]
@@ -96,16 +110,26 @@ def start
 
 	rescue SystemExit
 		raise
-		
+	
 	rescue Exception => e
 		File.open(OPTIONS[:log_file], 'a') do |f|
 			f.puts("#{e.class}: #{e.message || e}\n  " +
 				e.backtrace.join("\n  "))
 		end
+		Process.kill('SIGTERM', tee_pid) if tee_pid
+		Process.kill('SIGTERM', command_pid) if command_pid
 		raise e
 
 	ensure
 		delete_lock_file(lock_file) if lock_file
+	end
+end
+
+def get_signal_name(signal_exception)
+	if signal_exception.is_a?(Interrupt)
+		return "SIGINT"
+	else
+		return signal_exception.signm
 	end
 end
 

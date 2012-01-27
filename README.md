@@ -53,10 +53,7 @@ You should run monitor-cpu with daemon tools:
     mkdir -p /etc/service/monitor-cpu
     cat <<EOF > /etc/service/monitor-cpu/run.tmp
     #!/bin/bash
-    set -em
-    setuidgid daemon /tools/monitor-cpu 2>&1 | setuidgid daemon logger -i -t monitor-cpu &
-    trap "kill $(jobs -p)" EXIT
-    fg %1 >/dev/null
+    exec setuidgid daemon /tools/run --syslog /tools/monitor-cpu
     EOF
     chmod +x /etc/service/monitor-cpu/run.tmp
     mv /etc/service/monitor-cpu/run.tmp /etc/service/monitor-cpu/run

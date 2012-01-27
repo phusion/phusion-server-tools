@@ -1,4 +1,5 @@
 TOOLS_DIR = File.expand_path(File.dirname(__FILE__))
+OLD_PATH = ENV['PATH']
 ENV['PATH'] = "#{TOOLS_DIR}:#{ENV['PATH']}"
 if ENV['TOOL_LEVEL']
 	TOOL_LEVEL = ENV['TOOL_LEVEL'].to_i

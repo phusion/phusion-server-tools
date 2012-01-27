@@ -149,13 +149,22 @@ Runs the given command but only print its output (both STDOUT and STDERR) if its
 
 ### run
 
-This is a command runner with various features. It redirects the command's stdin to /dev/null, its stdout and stderr to `tee $GIVEN_LOG_FILE`, waits until the command has exited and returns with the same exit code.
+Runs the given command in the following way:
+
+ * stdin is redirected to /dev/null.
+ * stdout and stderr are both printed to `run`'s stdout, and also to either a log file or to syslog.
+ * It waits until the command has exited and returns with the same exit code.
+ * All signals are forwarded to the command process.
 
 The following features are also available:
 
  * `--status-file`: a file for storing the exit code of the command. It is created before the command is run, but is empty initially.
  * `--lock-file`: `run` will abort with an error if the given lock file already exists. Otherwise, it will create the lock file, write its PID to it and delete the lock file after the command has finished.
  * `--email-to`: send an email to the given (comma-separated) addresses when the command has finished.
+
+### syslog-tee
+
+This is like `tee`, but writes to syslog instead of a file. Accepts the same arguments as the `logger` command.
 
 ### gc-git-repos
 

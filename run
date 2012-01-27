@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
 require File.expand_path(File.dirname(__FILE__) + '/shared')
+ENV['PATH'] = OLD_PATH
+STDOUT.sync = STDERR.sync = true
+
 require 'rubygems'
 require 'optparse'
 require 'escape'
@@ -15,6 +18,9 @@ def parse_options
 		opts.separator "Options:"
 		opts.on("--log-file FILE") do |value|
 			OPTIONS[:log_file] = value
+		end
+		opts.on("--syslog") do
+			OPTIONS[:syslog] = true
 		end
 		opts.on("--status-file FILE") do |value|
 			OPTIONS[:status_file] = value
@@ -35,8 +41,8 @@ def parse_options
 		exit 1
 	end
 
-	if !OPTIONS[:log_file]
-		abort "You must specify '--log-file'! See '--help'."
+	if !OPTIONS[:log_file] && !OPTIONS[:syslog]
+		abort "You must specify either '--log-file' or '--syslog'! See '--help'."
 	elsif ARGV.size < 1
 		STDERR.puts parser
 		exit 1
@@ -46,26 +52,40 @@ end
 def start
 	parse_options
 
+	program_name = File.basename(ARGV[0])
 	begin
 		lock_file = create_lock_file
 
-		File.open(OPTIONS[:log_file], 'w').close
+		if OPTIONS[:log_file]
+			File.open(OPTIONS[:log_file], 'w').close
+		end
 		write_status_file('')
 
 		a, b = IO.pipe
-		tee_pid = fork do
-			b.close
-			STDIN.reopen(a)
-			# Don't let terminal signals reach this process.
-			Process.setsid
-			exec("tee", OPTIONS[:log_file])
-		end
 		command_pid = fork do
 			a.close
 			STDIN.reopen("/dev/null", "r")
 			STDOUT.reopen(b)
 			STDERR.reopen(b)
 			exec(*ARGV)
+		end
+		if OPTIONS[:syslog]
+			output_sink_pid = fork do
+				b.close
+				STDIN.reopen(a)
+				STDERR.reopen(STDOUT)
+				# Don't let terminal signals reach this process.
+				Process.setsid
+				exec("#{TOOLS_DIR}/syslog-tee", "-t", "#{program_name}[#{command_pid}]")
+			end
+		else
+			output_sink_pid = fork do
+				b.close
+				STDIN.reopen(a)
+				# Don't let terminal signals reach this process.
+				Process.setsid
+				exec("tee", OPTIONS[:log_file])
+			end
 		end
 		a.close
 		b.close
@@ -86,12 +106,19 @@ def start
 			end
 		end
 
+		# TODO: are we supposed to wait for the output sink process?
+		# If we only wait for the command then the output sink process
+		# may not have finished processing all the output yet.
+		# But if we wait for both, and the command spawns subprocesses,
+		# then the output sink process doesn't exit until all those
+		# subprocesses have also exited. Maybe we should provide a
+		# command line option for this.
 		begin
-			Process.waitpid(tee_pid)
+			Process.waitpid(output_sink_pid)
 		rescue Errno::ECHILD
 			# Ignore exception.
 		end
-		tee_pid = nil
+		output_sink_pid = nil
 
 		write_status_file(exit_code)
 		if OPTIONS[:email_to]
@@ -112,11 +139,17 @@ def start
 		raise
 	
 	rescue Exception => e
-		File.open(OPTIONS[:log_file], 'a') do |f|
+		if OPTIONS[:log_file]
+			f = File.open(OPTIONS[:log_file], 'a')
+		else
+			f = IO.popen("logger -t '#{program_name}:runner[#{$$}]'", "w")
+		end
+		begin
 			f.puts("#{e.class}: #{e.message || e}\n  " +
 				e.backtrace.join("\n  "))
+		ensure
+			f.close
 		end
-		Process.kill('SIGTERM', tee_pid) if tee_pid
 		Process.kill('SIGTERM', command_pid) if command_pid
 		raise e
 

@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+# encoding: binary
+
+STDOUT.sync = STDERR.sync = true
+
+class LoggerExited < StandardError
+end
+
+trap "SIGCHLD" do
+	raise LoggerExited
+end
+
+a, b = IO.pipe
+b.sync = true
+
+begin
+	pid = fork do
+		b.close
+		STDIN.reopen(a)
+		exec("logger", *ARGV)
+	end
+	a.close
+
+	buf = ''
+	while !STDIN.eof?
+		STDIN.readpartial(1024, buf)
+		STDOUT.write(buf)
+		begin
+			b.write(buf)
+		rescue Errno::EPIPE
+			break
+		end
+	end
+	trap "SIGCHLD", "DEFAULT"
+rescue LoggerExited
+end
+
+b.close
+if pid
+	begin
+		Process.waitpid(pid)
+		exit($?.exitstatus || 1)
+	rescue Errno::ECHILD
+		exit 1
+	end
+else
+	exit 1
+end

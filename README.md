@@ -1,9 +1,6 @@
 # Phusion Server Tools
 
-A collection of server administration tools that we use. Everything is
-written in Ruby and designed to work with Debian. These scripts may
-work with other operating systems or distributions as well, but it's not
-tested.
+A collection of server administration tools that we use. Everything is written in Ruby and designed to work with Debian. These scripts may work with other operating systems or distributions as well, but it's not tested. [Read documentation with table of contents.](http://phusion.github.com/phusion-server-tools/)
 
 Install with:
 
@@ -70,7 +67,7 @@ Run it every 15 minutes in cron:
 
 This script sends HTTP requests to all listed web applications and checks whether the response contains a certain substring. If not, an email is sent.
 
-Install into cron and have it run every 10 minutes:
+Run it every 10 minutes in cron:
 
     0,10,20,30,40,50 * * * * /tools/check-web-apps
 

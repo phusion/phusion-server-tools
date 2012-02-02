@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# encoding: utf-8
+
+def remove_line(filename, line)
+	lines = File.open(filename, "r") do |f|
+		f.binmode
+		f.read.split("\n", -1)
+	end
+	if index = lines.find_index(line)
+		lines.delete_at(index)
+	end
+	File.open(filename, "w") do |f|
+		f.binmode
+		f.write(lines.join("\n"))
+	end
+end
+
+if ARGV.size < 2
+	abort "Usage: remove-line <FILENAME> <LINE>"
+else
+	remove_line(ARGV[0], ARGV[1 .. ARGV.size - 1].join(" "))
+end

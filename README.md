@@ -104,9 +104,25 @@ You must also make sure your filesystem is mounted with ACL support, e.g.:
 
 Don't forget to update /etc/fstab too.
 
+### add-line
+
+Adds a line to the given file if it doesn't already include it.
+
+    /tools/add-line foo.log "hello world"
+    # Same effect:
+    /tools/add-line foo.log hello world
+
+### remove-line
+
+Removes the first instance of a line from the given file. Does nothing if the file doesn't include that line.
+
+    /tools/remove-line foo.log "hello world"
+    # Same effect:
+    /tools/remove-line foo.log hello world
+
 ### truncate
 
-Truncates all passed files to 0 bytes.
+Truncates all given files to 0 bytes.
 
 
 ## RabbitMQ

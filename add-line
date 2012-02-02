@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+# encoding: utf-8
+
+def add_line(filename, line)
+	lines = File.open(filename, 'r') do |f|
+		f.binmode
+		f.read.split("\n", -1)
+	end
+	if !lines.include?(line)
+		if lines.last && lines.last.empty?
+			lines.pop
+		end
+		lines << "#{line}\n"
+		File.open(filename, "w") do |f|
+			f.binmode
+			f.write(lines.join("\n"))
+		end
+	end
+end
+
+if ARGV.size < 2
+	abort "Usage: add-line <FILENAME> <LINE>"
+else
+	add_line(ARGV[0], ARGV[1 .. ARGV.size - 1].join(" "))
+end

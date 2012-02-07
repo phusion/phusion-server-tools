@@ -108,7 +108,7 @@ def optional_config(name, default = nil)
 end
 
 def hostname
-	return `hostname`.strip
+	@hostname ||= `hostname`.strip
 end
 
 def email(from, to, subject, body)

@@ -5,14 +5,23 @@ require 'net/http'
 require 'net/https'
 
 def check(web_app)
-	response = http_get(web_app['url'], web_app['username'], web_app['password'])
-	if !response.body.include?(web_app['substring'])
-		domain = URI.parse(web_app['url']).host
-		email(config(:from), config(:to),
-			sprintf("[#{hostname}] #{config(:subject)}", domain),
-			"A web application is down!\n" +
-			"URL: #{web_app['url']}\n")
+	begin
+		response = http_get(web_app['url'], web_app['username'], web_app['password'])
+	rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT
+		notify_down(web_app)
+		response = nil
 	end
+	if response && !response.body.include?(web_app['substring'])
+		notify_down(web_app)
+	end
+end
+
+def notify_down(web_app)
+	domain = URI.parse(web_app['url']).host
+	email(config(:from), config(:to),
+		sprintf("#{config(:subject)}", domain),
+		"A web application is down!\n" +
+		"URL: #{web_app['url']}\n")
 end
 
 def http_get(url, username = nil, password = nil)

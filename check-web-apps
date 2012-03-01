@@ -7,8 +7,8 @@ require 'net/https'
 def check(web_app)
 	begin
 		response = http_get(web_app['url'], web_app['username'], web_app['password'])
-	rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT
-		notify_down(web_app)
+	rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT, SocketError => e
+		notify_down(web_app, e)
 		response = nil
 	end
 	if response && !response.body.include?(web_app['substring'])
@@ -16,12 +16,16 @@ def check(web_app)
 	end
 end
 
-def notify_down(web_app)
+def notify_down(web_app, exception = nil)
 	domain = URI.parse(web_app['url']).host
+	message = "A web application is down!\n"
+	if exception
+		message << "Exception: #{exception}\n"
+	end
+	message << "URL: #{web_app['url']}\n"
 	email(config(:from), config(:to),
 		sprintf("#{config(:subject)}", domain),
-		"A web application is down!\n" +
-		"URL: #{web_app['url']}\n")
+		message)
 end
 
 def http_get(url, username = nil, password = nil)

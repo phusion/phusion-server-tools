@@ -184,7 +184,7 @@ In order to preserve file permissions, the `git gc` command is run as the owner 
 
 Make it run every Sunday at 0:00 AM in cron with low I/O priority:
 
-    0 0 * * sun /tools/silence-unless-failed ionice -n 7 /tools/git-gc-repos
+    0 0 * * sun /tools/silence-unless-failed ionice -n 7 /tools/gc-git-repos
 
 ### confine-to-rsync
 

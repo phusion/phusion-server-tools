@@ -7,13 +7,16 @@ require 'net/https'
 def check(web_app)
 	begin
 		response = http_get(web_app['url'], web_app['username'], web_app['password'])
-	rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT, SocketError => e
+	rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT, SocketError, Timeout::Error => e
 		notify_down(web_app, e)
 		response = nil
 	end
 	if response && !response.body.include?(web_app['substring'])
 		notify_down(web_app)
 	end
+rescue => e
+	STDERR.puts "An exception occurred while checking for #{web_app['url']}"
+	raise e
 end
 
 def notify_down(web_app, exception = nil)

@@ -117,6 +117,42 @@ Removes the first instance of a line from the given file. Does nothing if the fi
     # Same effect:
     /tools/remove-line foo.log hello world
 
+### set-section
+
+Sets the content of a named section inside a text file while preserving all other text. Contents are read from stdin. A section looks like this:
+
+    ###### BEGIN #{section_name} ######
+    some text
+    ###### END #{section_name} ######
+
+If the section doesn't exist, then it will be created.
+
+    $ cat foo.txt
+    hello world
+    $ echo hamburger | /tools/set-section foo.txt "mcdonalds menu"
+    $ cat foo.txt
+    hello world
+    ##### BEGIN mcdonalds menu #####
+    hamburger
+    ##### END mcdonalds menu #####
+
+If the section already exists then its contents will be updated.
+
+    # Using above foo.txt.
+    $ echo french fries | /tools/set-section foo.txt "mcdonalds menu"
+    $ cat foo.txt
+    hello world
+    ##### BEGIN mcdonalds menu #####
+    french fries
+    ##### END mcdonalds menu #####
+
+If the content is empty then the section will be removed if it exists.
+
+    # Using above foo.txt
+    $ echo | /tools/set-section foo.txt "mcdonalds menu"
+    $ cat foo.txt
+    hello world
+
 ### truncate
 
 Truncates all given files to 0 bytes.

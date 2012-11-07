@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+# encoding: utf-8
+
+def set_section(filename, section_name, content)
+	section_begin_str = "###### BEGIN #{section_name} ######"
+	section_end_str   = "###### END #{section_name} ######"
+
+	lines = File.open(filename, 'r') do |f|
+		f.binmode
+		f.read.split("\n", -1)
+	end
+
+	content.chomp!
+
+	start_index = lines.find_index(section_begin_str)
+	if !start_index
+		# Section is not in file.
+		return if content.empty?
+		lines << section_begin_str
+		lines << content
+		lines << section_end_str
+	else
+		end_index = start_index + 1
+		while end_index < lines.size && lines[end_index] != section_end_str
+			end_index += 1
+		end
+		if end_index == lines.size
+			# End not found. Pretend like the section is empty.
+			end_index = start_index
+		end
+		lines.slice!(start_index, end_index - start_index + 1)
+		if !content.empty?
+			lines.insert(start_index, section_begin_str, content, section_end_str)
+		end
+	end
+	
+	File.open(filename, "w") do |f|
+		f.binmode
+		if lines.last && lines.last.empty?
+			lines.pop
+		end
+		f.write(lines.join("\n"))
+		f.write("\n")
+	end
+end
+
+if ARGV.size != 2
+	abort "Usage: set-section <FILENAME> <SECTION NAME>"
+else
+	set_section(ARGV[0], ARGV[1], STDIN.read)
+end

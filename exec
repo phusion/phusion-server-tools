@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+file = ARGV.shift
+name = ARGV.shift
+exec([file, name], *ARGV)

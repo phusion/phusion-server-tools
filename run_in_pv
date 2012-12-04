@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-if ARGV.size != 1
+if ARGV.size < 1
 	STDERR.puts "Usage: ./run_in_pv COMMAND..."
 	exit 1
 end

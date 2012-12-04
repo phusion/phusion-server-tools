@@ -12,7 +12,7 @@ OPTIONS = {}
 def parse_options
 	parser = OptionParser.new do |opts|
 		nl = "\n" + ' ' * 37
-		opts.banner = "Usage: ./run-in-background [options] COMMAND..."
+		opts.banner = "Usage: ./run [options] COMMAND..."
 		opts.separator ""
 		
 		opts.separator "Options:"

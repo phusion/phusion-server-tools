@@ -195,18 +195,22 @@ Runs the given command but only print its output (both STDOUT and STDERR) if its
 
 ### run
 
-Runs the given command in the following way:
+This tool allows running a command in various ways. Supported features:
 
- * stdin is redirected to /dev/null.
- * stdout and stderr are both printed to `run`'s stdout, and also to either a log file or to syslog.
- * It waits until the command has exited and returns with the same exit code.
+ * Running the command with a different name (`argv[0]` value). Specify `--program-name NAME` to use this feature.
+ * Sending a copy of the output to a log file. Specify `--log-file FILENAME` to use this feature. It will overwrite the log file by default; specify `--append` to append to the file instead.
+ * Sending a copy of the output to syslog. Specify `--syslog` to use this feature. `run` will use the command's program name as the syslog program name. `--program-name` is respected.
+ * Sending the output to [pv](http://www.ivarch.com/programs/pv.shtml). You can combine this with `--log-file` and `--syslog`.
+ * Printing the exit code of the command to a status file once the command exits. Specify `--status-file FILENAME` to use this feature.
+ * Holding a lock file while the command is running. If the lock file already exists, then `run` will abort with an error. Otherwise, it will create the lock file, write the command's PID to the file and delete the file after the command has finished.
+ * Sending an email after the command has finished. Specify `--email-to EMAILS` to use this feature. It should be a comma-separated list of addresses.
+
+`run` always exhibits the following properties:
+
+ * It redirects stdin to /dev/null.
+ * It exits with the same exit code as the command, unlike bash which exits with the exit code of the last command in the pipeline.
+ * stdout and stderr are both combined into a single stream. If you specify `--log-file`, `--syslog` or `--pv` then both stdout and stderr will be redirected to the pipeline.
  * All signals are forwarded to the command process.
-
-The following features are also available:
-
- * `--status-file`: a file for storing the exit code of the command. It is created before the command is run, but is empty initially.
- * `--lock-file`: `run` will abort with an error if the given lock file already exists. Otherwise, it will create the lock file, write its PID to it and delete the lock file after the command has finished.
- * `--email-to`: send an email to the given (comma-separated) addresses when the command has finished.
 
 ### syslog-tee
 

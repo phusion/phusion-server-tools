@@ -69,17 +69,12 @@ def start
 		create_log_file
 		write_status_file('')
 
+		STDIN.reopen("/dev/null", "r")
+
 		if has_sink?
-			if pipe_stderr_to_sink?
-				main_process = spawn(main_command,
-					:in => ["/dev/null", "r"],
-					:out => :pipe,
-					:err => :pipe)
-			else
-				main_process = spawn(main_command,
-					:in => ["/dev/null", "r"],
-					:out => :pipe)
-			end
+			main_process = spawn(main_command,
+				:out => :pipe,
+				:err => :pipe)
 			sink_process = spawn_sink(main_process)
 			[:in, :out].each do |channel|
 				main_process[channel].close if main_process[channel]
@@ -214,10 +209,6 @@ end
 
 def has_sink?
 	return OPTIONS[:syslog] || OPTIONS[:log_file] || OPTIONS[:pv]
-end
-
-def pipe_stderr_to_sink?
-	return !OPTIONS[:pv]
 end
 
 def spawn_sink(main_process)

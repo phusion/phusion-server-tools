@@ -42,19 +42,12 @@ username, *dirs = ARGV
 dirs.each do |dir|
 	print_activity "cd #{dir}"
 	Dir.chdir(dir) do
-		executable_files = "/tmp/executable-files.#{$$}"
-		sh "find -type f -executable -print0 > #{executable_files}"
 		if options[:read_write]
-			sh "find -type f -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:rw-"
-			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:rwx"
-			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -d -m user:#{username}:rwx"
+			sh "setfacl -R -m user:#{username}:rwX ."
+			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -d -m user:#{username}:rwX"
 		else
-			sh "find -type f -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:r-"
-			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -m user:#{username}:r-x"
-			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -d -m user:#{username}:r-x"
+			sh "setfacl -R -m user:#{username}:r-X ."
+			sh "find -type d -print0 | xargs -0 -n 1000 -r setfacl -d -m user:#{username}:r-X"
 		end
-		sh "find -type f -print0 | xargs -0 -n 1000 -r chmod -x"
-		sh "cat #{executable_files} | xargs -0 -n 1000 -r chmod +x"
-		sh "rm -f #{executable_files}"
 	end
 end

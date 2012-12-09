@@ -13,14 +13,24 @@ def parse_options
 	parser = OptionParser.new do |opts|
 		nl = "\n" + ' ' * 37
 		opts.banner = "Usage: ./run [options] COMMAND..."
+		opts.separator "Run a command with various options."
 		opts.separator ""
 		
 		opts.separator "Options:"
 		opts.on("--log-file FILE") do |value|
 			OPTIONS[:log_file] = value
 		end
+		opts.on("--append", "Append to log file instead of overwriting it.") do
+			OPTIONS[:append] = true
+		end
 		opts.on("--syslog") do
 			OPTIONS[:syslog] = true
+		end
+		opts.on("--pv") do
+			OPTIONS[:pv] = true
+		end
+		opts.on("--program-name NAME") do |value|
+			OPTIONS[:program_name] = value
 		end
 		opts.on("--status-file FILE") do |value|
 			OPTIONS[:status_file] = value
@@ -41,68 +51,59 @@ def parse_options
 		exit 1
 	end
 
-	if !OPTIONS[:log_file] && !OPTIONS[:syslog]
-		abort "You must specify either '--log-file' or '--syslog'! See '--help'."
-	elsif ARGV.size < 1
+	if ARGV.size < 1
 		STDERR.puts parser
 		exit 1
 	end
 end
 
+def can_exec_directly?
+	return !OPTIONS[:log_file] && !OPTIONS[:syslog] && !OPTIONS[:pv] && !OPTIONS[:status_file] && !OPTIONS[:lock_file] && !OPTIONS[:email_to]
+end
+
 def start
 	parse_options
 
-	program_name = File.basename(ARGV[0])
 	begin
 		lock_file = create_lock_file
-
-		if OPTIONS[:log_file]
-			File.open(OPTIONS[:log_file], 'w').close
-		end
+		create_log_file
 		write_status_file('')
 
-		a, b = IO.pipe
-		command_pid = fork do
-			a.close
-			STDIN.reopen("/dev/null", "r")
-			STDOUT.reopen(b)
-			STDERR.reopen(b)
-			exec(*ARGV)
-		end
-		if OPTIONS[:syslog]
-			output_sink_pid = fork do
-				b.close
-				STDIN.reopen(a)
-				STDERR.reopen(STDOUT)
-				# Don't let terminal signals reach this process.
-				Process.setsid
-				exec("#{TOOLS_DIR}/syslog-tee", "-t", "#{program_name}[#{command_pid}]")
+		if has_sink?
+			if pipe_stderr_to_sink?
+				main_process = spawn(main_command,
+					:in => ["/dev/null", "r"],
+					:out => :pipe,
+					:err => :pipe)
+			else
+				main_process = spawn(main_command,
+					:in => ["/dev/null", "r"],
+					:out => :pipe)
 			end
+			sink_process = spawn_sink(main_process)
+			[:in, :out].each do |channel|
+				main_process[channel].close if main_process[channel]
+				main_process.delete(channel)
+			end
+		elsif can_exec_directly?
+			exec(*main_command)
 		else
-			output_sink_pid = fork do
-				b.close
-				STDIN.reopen(a)
-				# Don't let terminal signals reach this process.
-				Process.setsid
-				exec("tee", OPTIONS[:log_file])
-			end
+			command = spawn(main_command)
 		end
-		a.close
-		b.close
 
 		while true
 			begin
-				Process.waitpid(command_pid)
+				Process.waitpid(main_process[:pid])
 				exit_code = ($?.exitstatus || 2)
-				command_pid = nil
+				main_process.delete(:pid)
 				break
 			rescue Errno::ECHILD
 				exit_code = 1
-				command_pid = nil
+				main_process.delete(:pid)
 				break
 			rescue SignalException => e
 				signame = get_signal_name(e)
-				Process.kill(signame, command_pid)
+				Process.kill(signame, main_process[:pid])
 			end
 		end
 
@@ -113,12 +114,16 @@ def start
 		# then the output sink process doesn't exit until all those
 		# subprocesses have also exited. Maybe we should provide a
 		# command line option for this.
-		begin
-			Process.waitpid(output_sink_pid)
-		rescue Errno::ECHILD
-			# Ignore exception.
+		if sink_process
+			sink_process[:pids].each do |pid|
+				begin
+					Process.waitpid(pid)
+				rescue Errno::ECHILD
+					# Ignore exception.
+				end
+			end
+			sink_process = nil
 		end
-		output_sink_pid = nil
 
 		write_status_file(exit_code)
 		if OPTIONS[:email_to]
@@ -150,12 +155,117 @@ def start
 		ensure
 			f.close
 		end
-		Process.kill('SIGTERM', command_pid) if command_pid
+		Process.kill('SIGTERM', main_process[:pid]) if main_process && main_process[:pid]
 		raise e
 
 	ensure
 		delete_lock_file(lock_file) if lock_file
 	end
+end
+
+def spawn(command, options)
+	result = {}
+	if options[:in] == :pipe
+		stdin_pipe = IO.pipe
+		result[:in] = stdin_pipe[1]
+	end
+	if options[:out] == :pipe
+		stdout_pipe = IO.pipe
+		result[:out] = stdout_pipe[0]
+	end
+	result[:pid] = fork do
+		if options[:in] == :pipe
+			STDIN.reopen(stdin_pipe[0])
+		elsif options[:in].is_a?(Array)
+			STDIN.reopen(*options[:in])
+		elsif options[:in]
+			STDIN.reopen(options[:in])
+		end
+		if options[:out] == :pipe
+			STDOUT.reopen(stdout_pipe[1])
+		elsif options[:out].is_a?(Array)
+			STDOUT.reopen(*options[:out])
+		elsif options[:out]
+			STDOUT.reopen(options[:out])
+		end
+		if options[:err] == :pipe
+			STDERR.reopen(stdout_pipe[1])
+		elsif options[:err].is_a?(Array)
+			STDERR.reopen(*options[:err])
+		elsif options[:err]
+			STDERR.reopen(options[:err])
+		end
+		stdin_pipe[1].close if stdin_pipe
+		stdout_pipe[0].close if stdout_pipe
+		if options[:setsid]
+			Process.setsid
+		end
+		begin
+			exec(*command)
+		rescue SystemCallError => e
+			STDERR.puts "Cannot execute '#{command.join(' ')}': #{e}"
+			exit! 127
+		end
+	end
+	stdin_pipe[0].close if stdin_pipe
+	stdout_pipe[1].close if stdout_pipe
+	return result
+end
+
+def has_sink?
+	return OPTIONS[:syslog] || OPTIONS[:log_file] || OPTIONS[:pv]
+end
+
+def pipe_stderr_to_sink?
+	return !OPTIONS[:pv]
+end
+
+def spawn_sink(main_process)
+	if OPTIONS[:syslog]
+		command = ["#{TOOLS_DIR}/syslog-tee", "-t", "#{program_name}[#{main_process[:pid]}]"]
+	elsif OPTIONS[:log_file]
+		if OPTIONS[:append]
+			command = ["tee", "-a", OPTIONS[:log_file]]
+		else
+			command = ["tee", OPTIONS[:log_file]]
+		end
+	elsif OPTIONS[:pv]
+		command = pv_command
+	else
+		raise "Unknown options combination"
+	end
+
+	# We setsid because we don't want to let terminal signals reach any sink processes.
+	if (OPTIONS[:syslog] || OPTIONS[:log_file]) && OPTIONS[:pv]
+		# Pipeline: main_process | sink | pv
+		sink_process = spawn(command, :setsid => true, :in => main_process[:out], :out => :pipe)
+		pv_process   = spawn(pv_command, :setsid => true, :in => sink_process[:out])
+		sink_process[:out].close
+		sink_process.delete(:out)
+		return { :pids => [sink_process[:pid], pv_process[:pid]] }
+	else
+		# Pipeline: main_process | sink
+		sink_process = spawn(command, :setsid => true, :in => main_process[:out])
+		return { :pids => [sink_process[:pid]] }
+	end
+end
+
+def main_command
+	if OPTIONS[:program_name]
+		args = ARGV.dup
+		argv0 = args.shift
+		return [[argv0, OPTIONS[:program_name]], *args]
+	else
+		return ARGV
+	end
+end
+
+def program_name
+	return OPTIONS[:program_name] || File.basename(ARGV[0])
+end
+
+def pv_command
+	return ["pv"]
 end
 
 def get_signal_name(signal_exception)
@@ -177,6 +287,12 @@ def create_lock_file
 	end
 rescue Errno::EEXIST
 	raise "Lock file #{OPTIONS[:lock_file]} already exists!"
+end
+
+def create_log_file
+	if OPTIONS[:log_file]
+		File.open(OPTIONS[:log_file], OPTIONS[:append] ? 'a' : 'w').close
+	end
 end
 
 def delete_lock_file(lock_file)

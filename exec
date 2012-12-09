@@ -1,8 +1,0 @@
-#!/usr/bin/env ruby
-if ARGV.size < 2
-	STDERR.puts "Usage: ./exec PROCESS_TITLE COMMAND..."
-	exit 1
-end
-file = ARGV.shift
-name = ARGV.shift
-exec([file, name], *ARGV)

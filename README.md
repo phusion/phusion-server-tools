@@ -16,6 +16,14 @@ Each tool has its own prerequities, but here are some common prerequities:
 
 Some tools require additional configuration through `config.yml`, which must be located in the same directory as the tool or in `/etc/phusion-server-tools.yml`. Please see `config.yml.example` for an example.
 
+## Cryptographic verification
+
+We do not release source tarballs for Juvia. Users are expected to get the source code from Github.
+
+From time to time, we create Git tags for milestones. These milestones are signed with the [Phusion Software Signing key](http://www.phusion.nl/about/gpg). After importing this key you can verify Git tags as follows:
+
+    git tag --verify milestone-2013-03-11
+
 
 ## Backup
 

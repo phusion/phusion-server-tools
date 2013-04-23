@@ -193,6 +193,73 @@ This tool displays statistics for RabbitMQ queues in a more friendly formatter t
 See the related documentation under "Monitoring and alerting".
 
 
+## Security
+
+### set-permissions
+
+This tool sets permissions on files based on configuration directives. It is intended to be run periodically so that you can force certain files to have certain permissions. It supports normal Unix permissions as well as ACLs.
+
+The primary use case that we created this tool for is to restrict access to compilers to users in a certain group. The tool is intended to be run every time the DPKG database changes (e.g. after every `apt-get upgrade`), as well as every hour in order to fix permissions that were changed through any other methods.
+
+If this tool detects that permissions have changed, then it will fix them, and print the old and new permissions.
+
+The configuration has the following syntax:
+
+    set-permissions:
+      permissions:
+        ## A glob specifying the files for which permissions should be changed.
+        /usr/bin/{cc,c++,gcc*,g++*,as}:
+          ## Set normal Unix permission. You can use any syntax supported by `chmod`.
+          - mode 700
+          ## Set an ACL. You can use any syntax supported by `setfacl`.
+          - acl group:compiler:r-x
+          ## You can set more ACLs. They will be applied in the specified order.
+          #- acl user:foo:r-x
+        /path-to-other-files:
+          - mode 0700
+          - acl user:foo:r-x
+
+By running this tool, it will fix permissions according to the config file:
+
+    /tools/set-permissions
+
+You should install a cron job to fix permissions every hour:
+
+    0 * * * * /tools/set-permissions --quiet
+
+You should also install a cron job to fix permissions every *minute* in order to reduce the attack window in case `apt-get upgrade` upgrades the compiler or something. Changing permissions on files every minute may negatively impact performance, which is why `set-permissions` supports the `--if-watch-files-changed` option. If this option is given, then this tool will compare the timestamps of the specified "watch files" against the timestamp of the specified "checkpoint file". If at least one watch file's timestamp is greater than that of the checkpoint file, then the tool will update the timestamp fo the checkpoint file and will continue as normal. Otherwise, the tool will quietly exit.
+
+For example, to configure this tool to only run if `apt-get upgrade` has modified the DPKG database:
+
+    set-permissions:
+      watch_files:
+        - /var/lib/dpkg/lock
+      checkpoint_file: /var/lib/set-permissions
+      permissions:
+        ...
+
+Then install a cron job to run this tool every minute:
+
+    # Run this tool every hour, but only if one of the watch files changed.
+    * * * * * /tools/set-permissions --quiet --if-watch-files-changed
+
+    # You should ALSO run this tool every hour without --if-watch-files-changed!
+    0 * * * * /tools/set-permissions --quiet
+
+
+### confine-to-rsync
+
+To be used in combination with SSH for confining an account to only rsync access. Very useful for locking down automated backup users.
+
+Consider two hypothetical servers, `backup.org` and `production.org`. Once in a while backup.org runs an automated `rsync` command, copying data from production.org to its local disk. Backup.org's SSH key is installed on production.org. If someone hacks into backup.org we don't want it to be able to login to production.org or do anything else that might cause damage, so we need to make sure that backup.org can only rsync from production.org, and only for certain directories.
+
+`confine-to-rsync` is to be installed into production.org's `authorized_keys` file as execution command:
+
+    command="/tools/confine-to-rsync /directory1 /directory2",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-dss AAAAB3Nza(...rest of backup.org's key here...)
+
+`confine-to-rsync` checks whether the client is trying to execute rsync in server mode, and if so, whether the rsync is only being run on either /directory1 or /directory2. If not it will abort with an error.
+
+
 ## Other
 
 ### silcence-unless-failed
@@ -233,15 +300,3 @@ In order to preserve file permissions, the `git gc` command is run as the owner 
 Make it run every Sunday at 0:00 AM in cron with low I/O priority:
 
     0 0 * * sun /tools/silence-unless-failed ionice -n 7 /tools/gc-git-repos
-
-### confine-to-rsync
-
-To be used in combination with SSH for confining an account to only rsync access. Very useful for locking down automated backup users.
-
-Consider two hypothetical servers, `backup.org` and `production.org`. Once in a while backup.org runs an automated `rsync` command, copying data from production.org to its local disk. Backup.org's SSH key is installed on production.org. If someone hacks into backup.org we don't want it to be able to login to production.org or do anything else that might cause damage, so we need to make sure that backup.org can only rsync from production.org, and only for certain directories.
-
-`confine-to-rsync` is to be installed into production.org's `authorized_keys` file as execution command:
-
-    command="/tools/confine-to-rsync /directory1 /directory2",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-dss AAAAB3Nza(...rest of backup.org's key here...)
-
-`confine-to-rsync` checks whether the client is trying to execute rsync in server mode, and if so, whether the rsync is only being run on either /directory1 or /directory2. If not it will abort with an error.

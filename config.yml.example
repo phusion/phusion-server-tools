@@ -43,3 +43,8 @@ check-web-apps:
       #password: 123456
     #- url: http://app2.com/
     #- url: http://app3.com/
+
+rails-version-check:
+  app_dirs:
+    - /u/apps
+    #- /home/railsapps

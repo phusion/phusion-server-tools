@@ -195,58 +195,6 @@ See the related documentation under "Monitoring and alerting".
 
 ## Security
 
-### set-permissions
-
-This tool sets permissions on files based on configuration directives. It is intended to be run periodically so that you can force certain files to have certain permissions. It supports normal Unix permissions as well as ACLs.
-
-The primary use case that we created this tool for is to restrict access to compilers to users in a certain group. The tool is intended to be run every time the DPKG database changes (e.g. after every `apt-get upgrade`), as well as every hour in order to fix permissions that were changed through any other methods.
-
-If this tool detects that permissions have changed, then it will fix them, and print the old and new permissions.
-
-The configuration has the following syntax:
-
-    set-permissions:
-      permissions:
-        ## A glob specifying the files for which permissions should be changed.
-        /usr/bin/{cc,c++,gcc*,g++*,as}:
-          ## Set normal Unix permission. You can use any syntax supported by `chmod`.
-          - mode 700
-          ## Set an ACL. You can use any syntax supported by `setfacl`.
-          - acl group:compiler:r-x
-          ## You can set more ACLs. They will be applied in the specified order.
-          #- acl user:foo:r-x
-        /path-to-other-files:
-          - mode 0700
-          - acl user:foo:r-x
-
-By running this tool, it will fix permissions according to the config file:
-
-    /tools/set-permissions
-
-You should install a cron job to fix permissions every hour:
-
-    0 * * * * /tools/set-permissions --quiet
-
-You should also install a cron job to fix permissions every *minute* in order to reduce the attack window in case `apt-get upgrade` upgrades the compiler or something. Changing permissions on files every minute may negatively impact performance, which is why `set-permissions` supports the `--if-watch-files-changed` option. If this option is given, then this tool will compare the timestamps of the specified "watch files" against the timestamp of the specified "checkpoint file". If at least one watch file's timestamp is greater than that of the checkpoint file, then the tool will update the timestamp fo the checkpoint file and will continue as normal. Otherwise, the tool will quietly exit.
-
-For example, to configure this tool to only run if `apt-get upgrade` has modified the DPKG database:
-
-    set-permissions:
-      watch_files:
-        - /var/lib/dpkg/lock
-      checkpoint_file: /var/lib/set-permissions
-      permissions:
-        ...
-
-Then install a cron job to run this tool every minute:
-
-    # Run this tool every hour, but only if one of the watch files changed.
-    * * * * * /tools/set-permissions --quiet --if-watch-files-changed
-
-    # You should ALSO run this tool every hour without --if-watch-files-changed!
-    0 * * * * /tools/set-permissions --quiet
-
-
 ### confine-to-rsync
 
 To be used in combination with SSH for confining an account to only rsync access. Very useful for locking down automated backup users.

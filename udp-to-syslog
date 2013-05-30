@@ -1,0 +1,53 @@
+#!/usr/bin/env ruby
+require 'socket'
+require 'logger'
+require 'syslog'
+require 'optparse'
+
+options = {
+	:ident => 'udp-to-syslog',
+	:port  => 6666
+}
+
+parser = OptionParser.new do |opts|
+	nl = "\n" + ' ' * 37
+	opts.banner = "Usage: udp-to-syslog [options]"
+	opts.separator "Forwards UDP messages to syslog."
+	opts.separator ""
+	
+	opts.separator "Options:"
+	opts.on("-i", "--ident NAME",
+	        "Use the given syslog ident. Default: udp-to-syslog") do |value|
+		options[:port] = value
+	end
+	opts.on("-p", "--port PORT",
+	        "Listen on the given port. Default: 6666") do |value|
+		options[:port] = value
+	end
+end
+begin
+	parser.parse!
+rescue OptionParser::ParseError => e
+	STDERR.puts e
+	STDERR.puts
+	STDERR.puts "Please see '--help' for valid options."
+	exit 1
+end
+
+include Syslog::Constants
+
+Syslog.open(options[:ident], 0, LOG_USER)
+logger = Logger.new(STDERR)
+
+sock = UDPSocket.new
+sock.bind('0.0.0.0', options[:port])
+begin
+	while true
+		msg, addr = sock.recvfrom(1024 * 128)
+		Syslog.log(LOG_CRIT, "#{addr[2]}: #{msg}")
+		logger.warn("#{addr[2]}: #{msg}")
+	end
+rescue Interrupt
+rescue SignalException => e
+	raise if e.signo != Signal.list['TERM']
+end

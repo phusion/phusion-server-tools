@@ -239,6 +239,12 @@ This tool allows running a command in various ways. Supported features:
 
 This is like `tee`, but writes to syslog instead of a file. Accepts the same arguments as the `logger` command.
 
+### udp-to-syslog
+
+Forwards all incoming data on a UDP port to syslog. For each message, the source address is also noted. Originally written to be used in combination with Linux's netconsole.
+
+See `./udp-to-syslog --help` for options.
+
 ### gc-git-repos
 
 Garbage collects all git repositories defined in `config.yml`. For convenience, the list of repositories to garbage collect can be a glob, e.g. `/u/apps/**/*.git`.

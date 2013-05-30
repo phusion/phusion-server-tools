@@ -18,7 +18,7 @@ parser = OptionParser.new do |opts|
 	opts.separator "Options:"
 	opts.on("-i", "--ident NAME",
 	        "Use the given syslog ident. Default: udp-to-syslog") do |value|
-		options[:port] = value
+		options[:ident] = value
 	end
 	opts.on("-p", "--port PORT",
 	        "Listen on the given port. Default: 6666") do |value|

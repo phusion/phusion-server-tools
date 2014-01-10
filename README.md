@@ -11,7 +11,6 @@ It's not necessary to install to /tools, you can install to anywhere, but this d
 Each tool has its own prerequities, but here are some common prerequities:
 
  * Ruby (obviously)
- * The `escape` gem - `gem install escape`.
  * `pv` - `apt-get install pv`. Not required but very useful; allows display of progress bars.
 
 Some tools require additional configuration through `config.yml`, which must be located in the same directory as the tool or in `/etc/phusion-server-tools.yml`. Please see `config.yml.example` for an example.

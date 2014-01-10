@@ -5,7 +5,6 @@ STDOUT.sync = STDERR.sync = true
 
 require 'rubygems'
 require 'optparse'
-require 'escape'
 
 OPTIONS = {}
 

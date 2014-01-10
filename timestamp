@@ -1,0 +1,13 @@
+#!/bin/bash
+
+function cleanup()
+{
+	pids=$(jobs -p)
+	if [[ "$pids" != "" ]]; then
+		kill $pids
+	fi
+}
+
+trap cleanup EXIT
+"$@" 2>&1 | perl -p -MIO::Handle -MPOSIX -e 'BEGIN {$!=1; $|=1} $_ = strftime("%F %T -- ", localtime) . $_'
+exit ${PIPESTATUS[0]}

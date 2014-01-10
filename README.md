@@ -215,6 +215,12 @@ Runs the given command but only print its output (both STDOUT and STDERR) if its
 
     /tools/silence-unless-failed my-command arg1 arg2 --arg3
 
+### timestamp
+
+Runs the given command, and prepends timestamps to all its output. This will cause stdout and stderr to be merged and to be printed to stdout.
+
+    /tools/timestamp my-command arg1 arg2 --arg3
+
 ### run
 
 This tool allows running a command in various ways. Supported features:

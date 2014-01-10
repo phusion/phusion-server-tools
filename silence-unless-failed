@@ -1,12 +1,52 @@
 #!/bin/bash
 # Executes the given command, silencing all its output.
 # Its output is only printed to STDERR if the command failed.
+#
+# The output of the given command is buffered in a temporary file.
+# You can also invoke this tool with the following parameters:
+#   -f FILENAME   Buffer to a specific file. The file is truncated on opening.
+#   -a FILENAME   Like -a, but appends to the file.
 
-output="/tmp/output.$$"
-"$@" >$output 2>&1
-exit_code=$?
-if [[ $exit_code != 0 ]]; then
-	cat $output >&2
+if [[ "$1" == "-f" ]]; then
+	buffer_file="$2"
+	should_delete=0
+	should_append=0
+	shift
+	shift
+elif [[ "$1" == "-a" ]]; then
+	buffer_file="$2"
+	should_delete=0
+	should_append=1
+	shift
+	shift
+else
+	buffer_file=`mktemp /tmp/buffer.XXXXXXXXXX`
+	should_delete=1
+	should_append=0
 fi
-rm -f $output
+
+function cleanup()
+{
+	pids=$(jobs -p)
+	if [[ "$pids" != "" ]]; then
+		kill $pids
+	fi
+	if [[ $should_delete = 1 ]]; then
+		rm -f "$buffer_file"
+	fi
+}
+
+trap cleanup EXIT
+
+if [[ $should_append = 1 ]]; then
+	"$@" >>"$buffer_file" 2>&1
+	exit_code=$?
+else
+	"$@" >"$buffer_file" 2>&1
+	exit_code=$?
+fi
+
+if [[ $exit_code != 0 ]]; then
+	cat "$buffer_file" >&2
+fi
 exit $exit_code

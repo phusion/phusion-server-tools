@@ -16,19 +16,19 @@ def parse_options
 		opts.separator ""
 		
 		opts.separator "Options:"
-		opts.on("--log-file FILE") do |value|
+		opts.on("--log-file FILE", "Log to file in addition to printing to terminal") do |value|
 			OPTIONS[:log_file] = value
 		end
 		opts.on("--append", "Append to log file instead of overwriting it.") do
 			OPTIONS[:append] = true
 		end
-		opts.on("--syslog") do
+		opts.on("--syslog", "Log to syslog in additional to printing to terminal") do
 			OPTIONS[:syslog] = true
 		end
-		opts.on("--pv") do
+		opts.on("--pv", "Pipe output through pv") do
 			OPTIONS[:pv] = true
 		end
-		opts.on("--program-name NAME") do |value|
+		opts.on("--program-name NAME", "Run command with the given argv[0]") do |value|
 			OPTIONS[:program_name] = value
 		end
 		opts.on("--status-file FILE") do |value|

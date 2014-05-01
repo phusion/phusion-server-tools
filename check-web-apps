@@ -5,9 +5,19 @@ require 'net/http'
 require 'net/https'
 
 def check(web_app)
+	attempts = 0
 	begin
 		response = http_get(web_app['url'], web_app['username'], web_app['password'])
-	rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT, SocketError, Timeout::Error => e
+	rescue SocketError => e
+		if attempts < 3
+			attempts += 1
+			sleep 1
+			retry
+		else
+			notify_down(web_app, e)
+			response = nil
+		end
+	rescue Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::ETIMEDOUT, Timeout::Error => e
 		notify_down(web_app, e)
 		response = nil
 	end

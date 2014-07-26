@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+
+def usage
+	puts "Usage: ./flock <--shared|--exclusive> <LOCKFILE> <COMMAND> [OPTIONS...]"
+end
+
+lock_type = ARGV[0]
+lock_file = ARGV[1]
+ARGV.shift
+ARGV.shift
+
+if !lock_file || (lock_type != '--shared' && lock_type != '--exclusive') || ARGV.empty?
+	usage
+	exit 1
+end
+
+trap('CHLD', 'DEFAULT')
+
+begin
+	f = File.open(lock_file, 'w')
+rescue SystemCallError => e
+	STDERR.puts "Cannot open #{lock_file} for writing: #{e}"
+	exit 1
+end
+
+f.flock(lock_type == '--shared' ? File::LOCK_SH : File::LOCK_EX)
+pid = fork
+if pid.nil?
+	f.close
+	exec(*ARGV)
+else
+	begin
+		Process.waitpid(pid)
+		if $?
+			exit($?.exitstatus)
+		end
+	rescue Errno::ECHILD, Errno::ESRCH
+		# Do nothing
+	rescue SignalException => e
+		Process.kill(e.signo, pid)
+		exit 1
+	end
+end

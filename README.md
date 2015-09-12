@@ -26,6 +26,8 @@ From time to time, we create Git tags for milestones. These milestones are signe
 
 ## Backup
 
+Tip: looking to backup files other than MySQL dumps? Use the `rotate-files` tool.
+
 ### backup-mysql - Rotated, compressed, encrypted MySQL dumps
 
 A script which backs up all MySQL databases to `/var/backups/mysql`. By default at most 10 backups are kept, but this can be configured. All backups are compressed with gzip and can optionally be encrypted. The backup directory is denied all world access.
@@ -37,7 +39,6 @@ Encryption can be configured through the 'encrypt' option in config.yml.
 Make it run daily at 12:00 AM and 0:00 AM in cron:
 
     0 0,12 * * * /tools/silence-unless-failed /tools/backup-mysql
-
 
 ## Monitoring and alerting
 
@@ -163,6 +164,24 @@ If the content is empty then the section will be removed if it exists.
 ### truncate
 
 Truncates all given files to 0 bytes.
+
+### rotate-files
+
+Allows you to use the common pattern of creating a new file, while deleting files that are too old. The most common use case for this tool is to store a backup file while deleting older backups.
+
+The usage is as follows:
+
+    rotate-files <INPUT> <OUTPUT PREFIX> [OUTPUT SUFFIX] [OPTIONS]
+
+Suppose you have used some tool to create a database dump at `/tmp/backup.tar.gz`. If you run the following command...
+
+    rotate-files /tmp/backup.tar.gz /backups/backup- .tar.gz
+
+...then it will create the file `/backups/backup-<TIMESTAMP>.tar.gz`. It will also delete old backup files matching this same pattern.
+
+Old file deletion works by keeping only the most recent 50 files. This way, running `rotate-logs` on an old directory won't result in all old backups to be deleted. You can customize the number of files to keep with the `--max` parameter.
+
+Recency is determined through the timestamp in the filename, not the file timestamp metadata.
 
 
 ## RabbitMQ

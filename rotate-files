@@ -1,0 +1,122 @@
+#!/usr/bin/env ruby
+require File.expand_path(File.dirname(__FILE__) + '/shared')
+require 'optparse'
+
+class RotateFiles
+  def initialize(argv)
+    @argv = argv.dup
+  end
+
+  def run
+    parse_options
+    prepare
+    create_file
+    cleanup
+  end
+
+private
+  def parse_options
+    @max = 50
+
+    parser = OptionParser.new do |opts|
+      nl = "\n#{' ' * 37}"
+      opts.banner = "Usage: rotate-files <INPUT> <OUTPUT PREFIX> [OUTPUT SUFFIX] [OPTIONS]"
+      opts.separator 'Copy INPUT to the path specified by OUTPUT_PREFIX + timestamp + OUTPUT_SUFFIX,'
+      opts.separator 'then delete excess files that match the same pattern.'
+      opts.separator ''
+      opts.separator 'Example: rotate-files backup.tar.gz /backups/backup- .tar.gz'
+      opts.separator 'Creates /backups/backup-<TIMESTAMP>.tar.gz, deletes old backup files matching'
+      opts.separator 'this pattern.'
+      opts.separator ''
+
+      opts.on('--max NUMBER', Integer, "Maximum number of files to keep.#{nl}" \
+          "Default: 50") do |val|
+        @max = val
+      end
+      opts.on('--dry-run', "Print what will happen, but do not#{nl}" \
+          "actually do it") do
+        @dry_run = true
+      end
+      opts.on('-h', '--help', 'Display this help message') do
+        @help = true
+      end
+    end
+
+    begin
+      parser.parse!(@argv)
+    rescue OptionParser::ParseError => e
+      STDERR.puts "*** ERROR: #{e}"
+      abort parser.to_s
+    end
+
+    if @help
+      puts parser
+      exit
+    end
+
+    if @argv.size < 2
+      puts parser
+      abort
+    end
+
+    @input = @argv[0]
+    @output_prefix = @argv[1]
+    @output_suffix = @argv[2]
+  end
+
+  def prepare
+    now = Time.now.strftime('%Y-%m-%d-%H:%M:%S')
+    @output = "#{@output_prefix}#{now}#{@output_suffix}"
+    @output_dir = File.dirname(@output)
+  end
+
+  def create_file
+    puts "Creating #{@output}"
+    if @dry_run
+      puts 'Dry running, not actually creating that file'
+    else
+      sh 'cp', @input, @output
+    end
+  end
+
+  def cleanup
+    puts "Cleaning up, keeping only #{@max} most recent files"
+    files = sorted_files_eligible_for_cleanup
+
+    # Determine which files to keep
+    keep = files[0..@max]
+    if !keep.include?(@output)
+      keep << @output
+    end
+
+    # Determine which files to delete, then do that
+    delete = files - keep
+    if delete.empty?
+      puts 'Nothing to remove'
+    else
+      delete.each do |path|
+        if @dry_run
+          puts "Dry running; would have removed #{path}"
+        else
+          sh 'rm', path
+        end
+      end
+    end
+  end
+
+  def sorted_files_eligible_for_cleanup
+    files = []
+    Dir["#{@output_dir}/*"].each do |path|
+      if File.file?(path) && 
+           path.start_with?(@output_prefix) &&
+           path.end_with?(@output_suffix)
+        files << path
+      end
+    end
+    files.sort!
+    files.reverse!
+    files
+  end
+end
+
+RotateFiles.new(ARGV).run

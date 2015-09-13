@@ -179,7 +179,7 @@ Suppose you have used some tool to create a database dump at `/tmp/backup.tar.gz
 
 ...then it will create the file `/backups/backup-<TIMESTAMP>.tar.gz`. It will also delete old backup files matching this same pattern.
 
-Old file deletion works by keeping only the most recent 50 files. This way, running `rotate-logs` on an old directory won't result in all old backups to be deleted. You can customize the number of files to keep with the `--max` parameter.
+Old file deletion works by keeping only the most recent 50 files. This way, running `rotate-files` on an old directory won't result in all old backups to be deleted. You can customize the number of files to keep with the `--max` parameter.
 
 Recency is determined through the timestamp in the filename, not the file timestamp metadata.
 

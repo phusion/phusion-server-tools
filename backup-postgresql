@@ -12,7 +12,7 @@ if enc = optional_config(:encrypt)
   end
 end
 
-databases = `psql postgres -t <<<'SELECT datname FROM pg_database WHERE datistemplate = false'`.strip.split("\n")
+databases = quiet_capture("psql postgres -t <<<'SELECT datname FROM pg_database WHERE datistemplate = false'").strip.split("\n")
 databases.shift
 databases.delete("postgres")
 

@@ -39,6 +39,15 @@ def quiet_sh(command, *args)
 	end
 end
 
+def quiet_capture(command, *args)
+	if args.empty?
+		`/bin/bash -c #{Shellwords.escape command}`
+	else
+		command_str = Shellwords.join([command] + args)
+		`/bin/bash -c #{Shellwords.escape command_str}`
+	end
+end
+
 # Check whether the specified command is in $PATH, and return its
 # absolute filename. Returns nil if the command is not found.
 #

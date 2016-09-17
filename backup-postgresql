@@ -13,7 +13,7 @@ if enc = optional_config(:encrypt)
 end
 
 databases = quiet_capture("psql postgres -t <<<'SELECT datname FROM pg_database WHERE datistemplate = false'").strip.split("\n")
-databases.shift
+databases.map! { |db| db.strip }
 databases.delete("postgres")
 
 now = Time.now.strftime("%Y-%m-%d-%H:%M:%S")

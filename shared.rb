@@ -1,3 +1,5 @@
+require 'shellwords'
+
 TOOLS_DIR = File.expand_path(File.dirname(__FILE__))
 OLD_PATH = ENV['PATH']
 ENV['PATH'] = "#{TOOLS_DIR}:#{ENV['PATH']}"
@@ -26,7 +28,12 @@ def sh(command, *args)
 end
 
 def quiet_sh(command, *args)
-	if !system(command, *args)
+	if args.empty?
+		command_str = command
+	else
+		command_str = Shellwords.join([command] + args)
+	end
+	if !system('/bin/bash', '-c', command_str)
 		abort "*** COMMAND FAILED: #{command} #{args.join(' ')}".strip
 	end
 end

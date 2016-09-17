@@ -40,6 +40,18 @@ Make it run daily at 12:00 AM and 0:00 AM in cron:
 
     0 0,12 * * * /tools/silence-unless-failed /tools/backup-mysql
 
+### backup-postgresql - Rotated, compressed, encrypted PostgreSQL dumps
+
+A script which backs up all PostgreSQL databases to `/var/backups/postgresql`. By default at most 10 backups are kept, but this can be configured. All backups are compressed with gzip and can optionally be encrypted. The backup directory is denied all world access.
+
+It uses `psql` to obtain a list of databases and `pg_dump` to dump the database contents. If you want to run this script unattended you should therefore set the right login information relevant environment variables such as PGUSER.
+
+Encryption can be configured through the 'encrypt' option in config.yml.
+
+Make it run daily at 12:00 AM and 0:00 AM in cron:
+
+    0 0,12 * * * /tools/silence-unless-failed /tools/backup-postgresql
+
 ## Monitoring and alerting
 
 ### monitor-cpu - Monitors CPU usage and send email on suspicious activity

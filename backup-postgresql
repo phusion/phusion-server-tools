@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+require File.expand_path(File.dirname(__FILE__) + '/shared')
+BACKUP_DIR_ROOT = "/var/backups/postgresql"
+MAX_BACKUPS = optional_config('max-backups', 10)
+
+if enc = optional_config(:encrypt)
+  abort "*** ERROR: please set the configuration option backup-postgresql.encrypt.key" if !enc['key']
+  abort "*** ERROR: please set the configuration option backup-postgresql.encrypt.recipients" if !enc['recipients'] || enc['recipients'].empty?
+  encrypt_command = "gpg --sign --encrypt -u '#{enc['key']}'"
+  enc['recipients'].each do |recipient|
+    encrypt_command << " --recipient '#{recipient}'"
+  end
+end
+
+databases = `psql postgres -t <<<'SELECT datname FROM pg_database WHERE datistemplate = false'`.strip.split("\n")
+databases.shift
+databases.delete("postgres")
+
+now = Time.now.strftime("%Y-%m-%d-%H:%M:%S")
+backup_dir = "#{BACKUP_DIR_ROOT}/#{now}"
+
+sh "mkdir -p #{backup_dir}"
+for database in databases
+  dump_command = "pg_dump --clean --quote-all-identifiers --serializable-deferrable --dbname #{database} | gzip --best"
+  if encrypt_command
+    dump_command << " | #{encrypt_command}"
+    extension = "sql.gz.gpg"
+  else
+    extension = "sql.gz"
+  end
+  sh "set -o pipefail; #{dump_command} | #{pv_or_cat} > #{backup_dir}/#{database}.#{extension}"
+end
+
+puts "Cleaning up, keeping only #{MAX_BACKUPS} most recent backups..."
+dirs = Dir["#{BACKUP_DIR_ROOT}/*"].sort.reverse
+keep = dirs[0..MAX_BACKUPS]
+delete = dirs - keep
+delete.each do |dir|
+  sh "rm -rf #{dir}"
+end
+sh "chmod -R o-rwx #{BACKUP_DIR_ROOT}"

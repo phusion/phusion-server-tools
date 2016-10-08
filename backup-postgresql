@@ -15,6 +15,9 @@ end
 databases = quiet_capture("psql postgres -t <<<'SELECT datname FROM pg_database WHERE datistemplate = false'").strip.split("\n")
 databases.map! { |db| db.strip }
 databases.delete("postgres")
+if exclude_databases = optional_config(:exclude_databases)
+  databases -= exclude_databases
+end
 
 now = Time.now.strftime("%Y-%m-%d-%H:%M:%S")
 backup_dir = "#{BACKUP_DIR_ROOT}/#{now}"

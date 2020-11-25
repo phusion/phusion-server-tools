@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Collects the output of 'ps' periodically, and dumps them to
+# the given directory, with one file per dump.
+#
+# ## Usage syntax
+#
+#     collect-ps-periodically <DUMP DIRECTORY> <INTERVAL>
+#
+# `DUMP DIRECTORY` specifies where to dump to. This directory must
+# already exist.
+#
+# `INTERVAL` specifies the interval between dumps, in seconds. You
+# can also specify a unit suffix, e.g. `5m` (5 minutes) or `2h` (2 hours).
+#
+# ## Example
+#
+# Create a dump directory and run the script in the background,
+# collecting every 5 minutes:
+#
+#     mkdir ~/ps-dumps
+#     nohup collect-ps-periodically ~/ps-dumps 5m &
+#
+# At any point, feel free to stop the script...
+#
+#     ps aux | grep collect-ps-periodically
+#     kill <PID>
+#
+# ...and tar the dump directory and send it to someone for analysis:
+#
+#     tar -czf ps-dumps.tar.gz ~/ps-dumps
+
+set -e
+
+TARGET_DIR="$1"
+INTERVAL="$2"
+if [[ -z "$TARGET_DIR" || -z "$INTERVAL" ]]; then
+	echo 'Usage: collect-ps-periodically <DUMP DIRECTORY> <INTERVAL>'
+	exit 1
+fi
+
+function cleanup()
+{
+	# shellcheck disable=SC2155
+	local PIDS=$(jobs -p)
+	if [[ -n "$PIDS" ]]; then
+		# shellcheck disable=SC2086
+		kill $PIDS || true
+	fi
+}
+
+trap cleanup EXIT
+
+while true; do
+	DATE=$(date --rfc-3339=seconds)
+	ps auxw --sort=-%cpu > "$TARGET_DIR/$DATE.txt"
+	sleep "$INTERVAL"
+done

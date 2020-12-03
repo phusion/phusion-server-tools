@@ -54,6 +54,6 @@ trap cleanup EXIT
 
 while true; do
 	DATE=$(date --rfc-3339=seconds)
-	iotop -obPn 1 > "$TARGET_DIR/$DATE.txt"
+	iotop -obPn 1 > "$TARGET_DIR/$DATE iotop.txt"
 	sleep "$INTERVAL"
 done

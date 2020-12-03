@@ -52,6 +52,7 @@ trap cleanup EXIT
 
 while true; do
 	DATE=$(date --rfc-3339=seconds)
-	ps auxw --sort=-%cpu > "$TARGET_DIR/$DATE.txt"
+	ps -Ao 'user,pid,ppid,lwp,%cpu,%mem,rss,maj_flt,start_time,wchan,stat,flag,nlwp,cmd' --forest > "$TARGET_DIR/$DATE procs.txt"
+	ps -ALo 'user,pid,ppid,lwp,%cpu,%mem,rss,maj_flt,start_time,wchan,stat,flag,cmd' > "$TARGET_DIR/$DATE threads.txt"
 	sleep "$INTERVAL"
 done

@@ -6,7 +6,11 @@ MAX_BACKUPS = optional_config('max-backups', 10)
 if enc = optional_config(:encrypt)
 	abort "*** ERROR: please set the configuration option backup-mysql.encrypt.key" if !enc['key']
 	abort "*** ERROR: please set the configuration option backup-mysql.encrypt.recipients" if !enc['recipients'] || enc['recipients'].empty?
-	encrypt_command = "gpg --sign --encrypt -u '#{enc['key']}'"
+	encrypt_command = "gpg --batch --pinentry-mode loopback --sign --encrypt"
+	if path = enc['passphrase_file']
+		encrypt_command << " --passphrase-file #{Shellwords.escape path}"
+	end
+	encrypt_command << " -u '#{enc['key']}'"
 	enc['recipients'].each do |recipient|
 		encrypt_command << " --recipient '#{recipient}'"
 	end

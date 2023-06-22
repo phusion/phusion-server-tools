@@ -29,10 +29,10 @@ end
 
 def quiet_sh(command, *args)
 	if args.empty?
-		result = system('/bin/bash', '-c', command)
+		result = system('bash', '-o', 'pipefail', '-c', command)
 	else
 		command_str = Shellwords.join([command] + args)
-		result = system('/bin/bash', '-c', command_str)
+		result = system('bash', '-o', 'pipefail', '-c', command_str)
 	end
 	if !result
 		abort "*** COMMAND FAILED: #{command} #{args.join(' ')}".strip

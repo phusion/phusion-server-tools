@@ -290,3 +290,13 @@ In order to preserve file permissions, the `git gc` command is run as the owner 
 Make it run every Sunday at 0:00 AM in cron with low I/O priority:
 
     0 0 * * sun /tools/silence-unless-failed ionice -n 7 /tools/gc-git-repos
+
+### rails-version-check
+
+Checks application directories for outdated versions of Rails, based on `Gemfile.lock`. Directories are configured in `config.yml` or can be passed using the `APP_DIRS` environment variable containing comma separated directories, e.g.:
+
+    APP_DIRS=/home/rails_apps,/u/apps /tools/rails-version-check
+
+Or run it every 6 hours in cron:
+
+    0 */6 * * * /tools/rails-version-check

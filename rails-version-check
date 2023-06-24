@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+require File.expand_path(File.dirname(__FILE__) + '/shared')
+
+# Simple Rails version checker using `bundle outdated`
+# Checks the directories as defined in the config.yml, or the APP_DIRS environment variable (comma separated)
+require 'fileutils'
+if ENV['APP_DIRS']
+    APP_DIRS = ENV['APP_DIRS'].split ','
+else
+    APP_DIRS = config(:'app_dirs') 
+end
+
+APP_DIRS.each do |appsdir|
+    Dir.glob("#{appsdir}/*").each do |appdir|
+        FileUtils.chdir appdir do 
+            outdated = `bundle outdated`
+            matching_lines = outdated.lines.select {|l| l.strip! =~ /\* rails \(.*\)/ }
+            puts "Outdated Rails for #{appdir}: #{matching_lines.first}" unless matching_lines.empty?
+        end
+    end 
+end
